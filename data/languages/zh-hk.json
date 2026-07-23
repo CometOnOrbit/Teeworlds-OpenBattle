@@ -225,8 +225,8 @@
             "value": "已放置地雷 %i/3"
         },
         {
-            "key": "Mine tip: max 3 active. Restock at supply stations.",
-            "value": "地雷提示：最多同時存在 3 枚，可在補給站補充。"
+            "key": "Mine tip: max 3 active. Slots free when a mine explodes or is defused.",
+            "value": "地雷提示：最多同時存在 3 枚，爆炸或被拆除後會騰出名額。"
         },
         {
             "key": "Mines now aviable: %i/3!.",

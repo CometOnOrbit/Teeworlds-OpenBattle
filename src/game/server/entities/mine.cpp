@@ -79,23 +79,29 @@ void CMine::Hit()
 		if(m_DefuseProgress >= 70)
 		{
 			pOwner->ReleaseMineSlot();
-			GameServer()->CreateExplosion2(m_CurrentPos, m_Owner, WEAPON_RIFLE, 1);
+			m_Owner = -1;
+			GameServer()->CreateExplosion2(m_CurrentPos, pOwner->GetPlayer()->GetCID(), WEAPON_RIFLE, 1);
 			GameServer()->CreateSound(m_CurrentPos, SOUND_GRENADE_EXPLODE);
 			GameWorld()->DestroyEntity(this);
+			return;
 		}
 	}
+
+	if(m_Owner == -1)
+		return;
 
 	CCharacter *pTarget = GameWorld()->ClosestCharacter(m_CurrentPos, 30.0f, 0);
 	if(pTarget && pTarget->IsAlive() &&
 		pOwner->GetPlayer()->GetTeam() != pTarget->GetPlayer()->GetTeam())
 	{
 		pOwner->ReleaseMineSlot();
-		GameServer()->CreateExplosion2(m_CurrentPos, m_Owner, WEAPON_RIFLE, 1);
+		m_Owner = -1;
+		GameServer()->CreateExplosion2(m_CurrentPos, pOwner->GetPlayer()->GetCID(), WEAPON_RIFLE, 1);
 		GameServer()->CreateSound(m_CurrentPos, SOUND_GRENADE_EXPLODE);
 		// Kill-streak God Mode suppresses the direct mine kill. Slot release,
 		// effects and queued destruction still run.
 		if(!pTarget->BattlefieldGodModeActive())
-			pTarget->Die(m_Owner, WEAPON_GRENADE);
+			pTarget->Die(pOwner->GetPlayer()->GetCID(), WEAPON_GRENADE);
 		GameWorld()->DestroyEntity(this);
 	}
 }

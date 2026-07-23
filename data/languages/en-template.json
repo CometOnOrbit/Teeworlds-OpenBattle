@@ -225,8 +225,8 @@
             "value": "Mine placed %i/3!."
         },
         {
-            "key": "Mine tip: max 3 active. Restock at supply stations.",
-            "value": "Mine tip: max 3 active. Restock at supply stations."
+            "key": "Mine tip: max 3 active. Slots free when a mine explodes or is defused.",
+            "value": "Mine tip: max 3 active. Slots free when a mine explodes or is defused."
         },
         {
             "key": "Mines now aviable: %i/3!.",

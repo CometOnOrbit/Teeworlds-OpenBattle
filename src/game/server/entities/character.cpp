@@ -635,9 +635,10 @@ void CCharacter::FireWeapon()
 				GameServer()->SendChatTarget(m_pPlayer->GetCID(), m_Invisible ?
 					"You are now invisible." : "You are no longer invisible.");
 			}
-			else if(m_pPlayer->IsEngineer() && m_NumMines < 3 &&
-				m_MinesSinceSupply < 3)
+			else if(m_pPlayer->IsEngineer() && m_NumMines < 3)
 			{
+				// Active cap only (m_NumMines). m_MinesSinceSupply still tracks
+				// supply-station restock; exploding frees the slot via ReleaseMineSlot.
 				new CMine(GameWorld(), m_Pos, m_pPlayer->GetCID());
 				m_NumMines++;
 				m_MinesSinceSupply++;
@@ -645,7 +646,7 @@ void CCharacter::FireWeapon()
 				str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Mine placed %i/3!.", m_pPlayer->GetCID()), m_NumMines);
 				GameServer()->SendChatTarget(m_pPlayer->GetCID(), aBuf);
 				GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_MINE,
-					"Mine tip: max 3 active. Restock at supply stations.");
+					"Mine tip: max 3 active. Slots free when a mine explodes or is defused.");
 			}
 			else if(m_pPlayer->IsMedic())
 			{
@@ -1346,7 +1347,8 @@ void CCharacter::ApplyBattlefieldLoadout()
 
 void CCharacter::ReleaseMineSlot()
 {
-	m_NumMines--;
+	if(m_NumMines > 0)
+		m_NumMines--;
 	Act();
 }
 
