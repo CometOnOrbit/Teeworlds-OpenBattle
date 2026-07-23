@@ -410,7 +410,7 @@ void CRegister::RegisterUpdate(int Nettype)
 		if(g_Config.m_SvSixup)
 			UpdateRegister(PROTOCOL_TW7_IPV4);
 	}
-	if(Nettype & NETTYPE_IPV6)
+	if((Nettype & NETTYPE_IPV6) && g_Config.m_SvRegisterIpv6)
 	{
 		UpdateRegister(PROTOCOL_TW6_IPV6);
 		if(g_Config.m_SvSixup)
