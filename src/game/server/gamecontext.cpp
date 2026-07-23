@@ -806,7 +806,6 @@ void CGameContext::SendSixupClientInfos(int ClientID)
 	NewInfo.m_Local = 0;
 	NewInfo.m_Team = pPlayer->GetTeam();
 	NewInfo.m_pName = Server()->ClientName(ClientID);
-	NewInfo.m_pClan = Server()->ClientClan(ClientID);
 	NewInfo.m_Country = Server()->ClientCountry(ClientID);
 	NewInfo.m_Silent = 1;
 	for(int p = 0; p < 6; p++)
@@ -822,7 +821,10 @@ void CGameContext::SendSixupClientInfos(int ClientID)
 			continue;
 
 		if(Server()->IsSixup(i))
+		{
+			NewInfo.m_pClan = pPlayer->GetSnapClan(i);
 			Server()->SendPackMsg(&NewInfo, MSGFLAG_VITAL | MSGFLAG_NORECORD, i);
+		}
 
 		if(Server()->IsSixup(ClientID))
 		{
@@ -831,7 +833,7 @@ void CGameContext::SendSixupClientInfos(int ClientID)
 			Info.m_Local = 0;
 			Info.m_Team = m_apPlayers[i]->GetTeam();
 			Info.m_pName = Server()->ClientName(i);
-			Info.m_pClan = Server()->ClientClan(i);
+			Info.m_pClan = m_apPlayers[i]->GetSnapClan(ClientID);
 			Info.m_Country = Server()->ClientCountry(i);
 			Info.m_Silent = 1;
 			for(int p = 0; p < 6; p++)
@@ -847,9 +849,39 @@ void CGameContext::SendSixupClientInfos(int ClientID)
 	if(Server()->IsSixup(ClientID))
 	{
 		NewInfo.m_Local = 1;
+		NewInfo.m_pClan = pPlayer->GetSnapClan(ClientID);
 		Server()->SendPackMsg(&NewInfo, MSGFLAG_VITAL | MSGFLAG_NORECORD, ClientID);
 		SendSixupGameInfo(ClientID);
 		SendSixupServerSettings(ClientID);
+	}
+}
+
+void CGameContext::SendSixupClientInfoUpdate(int ClientID)
+{
+	CPlayer *pPlayer = m_apPlayers[ClientID];
+	if(!pPlayer || !Server()->ClientIngame(ClientID))
+		return;
+
+	protocol7::CNetMsg_Sv_ClientInfo Info;
+	Info.m_ClientID = ClientID;
+	Info.m_Team = pPlayer->GetTeam();
+	Info.m_pName = Server()->ClientName(ClientID);
+	Info.m_Country = Server()->ClientCountry(ClientID);
+	Info.m_Silent = 1;
+	for(int p = 0; p < 6; p++)
+	{
+		Info.m_apSkinPartNames[p] = pPlayer->m_TeeInfos.m_aaSkinPartNames[p];
+		Info.m_aUseCustomColors[p] = pPlayer->m_TeeInfos.m_aUseCustomColors[p];
+		Info.m_aSkinPartColors[p] = pPlayer->m_TeeInfos.m_aSkinPartColors[p];
+	}
+
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		if(!m_apPlayers[i] || !Server()->ClientIngame(i) || !Server()->IsSixup(i))
+			continue;
+		Info.m_Local = (i == ClientID);
+		Info.m_pClan = pPlayer->GetSnapClan(i);
+		Server()->SendPackMsg(&Info, MSGFLAG_VITAL | MSGFLAG_NORECORD, i);
 	}
 }
 
@@ -912,6 +944,10 @@ void CGameContext::OnClientConnected(int ClientID)
 
 void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 {
+	// Re-entrant Drop during leave broadcasts — player already torn down.
+	if(!m_apPlayers[ClientID])
+		return;
+
 	AbortVoteKickOnDisconnect(ClientID);
 	m_apPlayers[ClientID]->OnDisconnect(pReason);
 	delete m_apPlayers[ClientID];
@@ -1063,9 +1099,12 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 
 	if(!pRawMsg)
 	{
-		char aBuf[256];
-		str_format(aBuf, sizeof(aBuf), "dropped weird message '%s' (%d), failed on '%s'", m_NetObjHandler.GetMsgName(MsgID), MsgID, m_NetObjHandler.FailedMsgOn());
-		Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "server", aBuf);
+		if(g_Config.m_Debug)
+		{
+			char aBuf[256];
+			str_format(aBuf, sizeof(aBuf), "dropped weird message '%s' (%d), failed on '%s'", m_NetObjHandler.GetMsgName(MsgID), MsgID, m_NetObjHandler.FailedMsgOn());
+			Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "server", aBuf);
+		}
 		return;
 	}
 

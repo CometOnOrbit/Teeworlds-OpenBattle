@@ -112,7 +112,7 @@ int CRegister::SendRegister(void *pUser)
 	str_format(aHeader, sizeof(aHeader), "Info-Serial: %d", InfoSerial);
 	Register.AddHeader(aHeader);
 
-	if(g_Config.m_SvRegisterCommunityToken[0])
+	if((bool)g_Config.m_SvRegisterCommunityToken[0])
 	{
 		str_format(aHeader, sizeof(aHeader), "Community-Token: %s", g_Config.m_SvRegisterCommunityToken);
 		Register.AddHeader(aHeader);

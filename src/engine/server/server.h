@@ -107,6 +107,7 @@ public:
 		const IConsole::CCommandInfo *m_pRconCmdToSend;
 
 		bool m_Sixup;
+		bool m_Dropping;
 
 		void Reset();
 	};

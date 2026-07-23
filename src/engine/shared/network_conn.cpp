@@ -103,6 +103,11 @@ int CNetConnection::Flush()
 
 int CNetConnection::QueueChunkEx(int Flags, int DataSize, const void *pData, int Sequence)
 {
+	// Already torn down (e.g. mid-Drop). Queuing again can refill the resend
+	// buffer and trip another Drop → re-entrant OnClientDrop / pool double-free.
+	if(m_State == NET_CONNSTATE_OFFLINE)
+		return -1;
+
 	unsigned char *pChunkData;
 
 	// check if we have space for it, if not, flush the connection

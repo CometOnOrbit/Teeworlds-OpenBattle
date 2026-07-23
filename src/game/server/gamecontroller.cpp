@@ -589,6 +589,8 @@ void IGameController::Tick()
 				}
 
 				// move the player to the other team
+				if(!pP)
+					break;
 				int Temp = pP->m_LastActionTick;
 				pP->SetTeam(M^1);
 				pP->m_LastActionTick = Temp;

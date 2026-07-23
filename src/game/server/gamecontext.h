@@ -86,6 +86,7 @@ public:
 	bool HandleChatCommand(int ClientID, const char *pMessage);
 	void SendWelcomeTutorial(int ClientID);
 	void SendSixupClientInfos(int ClientID);
+	void SendSixupClientInfoUpdate(int ClientID);
 	void SendSixupGameInfo(int ClientID);
 	void SendSixupServerSettings(int ClientID);
 	void SendSixupSkinChange(int ClientID);

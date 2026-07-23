@@ -68,6 +68,27 @@ int CPlayer::GetBattlefieldClass() const
 	return BATTLEFIELD_CLASS_NONE;
 }
 
+const char *CPlayer::GetBattlefieldClassName() const
+{
+	switch(GetBattlefieldClass())
+	{
+	case BATTLEFIELD_CLASS_SOLDIER: return "Soldier";
+	case BATTLEFIELD_CLASS_ENGINEER: return "Engineer";
+	case BATTLEFIELD_CLASS_MEDIC: return "Medic";
+	case BATTLEFIELD_CLASS_SNIPER: return "Sniper";
+	default: return 0;
+	}
+}
+
+const char *CPlayer::GetSnapClan(int ForClientID) const
+{
+	const char *pClass = GetBattlefieldClassName();
+	if(!pClass)
+		return Server()->ClientClan(m_ClientID);
+	int LangCID = ForClientID >= 0 ? ForClientID : m_ClientID;
+	return GameServer()->Localize(pClass, LangCID);
+}
+
 void CPlayer::SetBattlefieldClass(int Class)
 {
 	m_Soldier = Class == BATTLEFIELD_CLASS_SOLDIER;
@@ -215,7 +236,7 @@ void CPlayer::Snap(int SnappingClient)
 			return;
 
 		StrToInts(&pClientInfo->m_Name0, 4, Server()->ClientName(m_ClientID));
-		StrToInts(&pClientInfo->m_Clan0, 3, Server()->ClientClan(m_ClientID));
+		StrToInts(&pClientInfo->m_Clan0, 3, GetSnapClan(SnappingClient));
 		pClientInfo->m_Country = Server()->ClientCountry(m_ClientID);
 		StrToInts(&pClientInfo->m_Skin0, 6, m_TeeInfos.m_SkinName);
 		pClientInfo->m_UseCustomColor = m_TeeInfos.m_UseCustomColor;
@@ -284,7 +305,8 @@ void CPlayer::OnDisconnect(const char *pReason)
 		char aBuf[512];
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
-			if(!GameServer()->m_apPlayers[i])
+			// Skip self: connection is already dead; sending can re-enter Drop.
+			if(!GameServer()->m_apPlayers[i] || i == m_ClientID)
 				continue;
 			if(pReason && *pReason)
 				str_format(aBuf, sizeof(aBuf), GameServer()->Localize("'%s' has left the game (%s)", i),

@@ -101,7 +101,7 @@ bool CGameControllerOpenBattle::CanBeMovedOnBalance(int ClientID)
 		for(int fi = 0; fi < 2; fi++)
 		{
 			CFlag *F = m_apFlags[fi];
-			if(F->m_pCarryingCharacter == Character)
+			if(F && F->m_pCarryingCharacter == Character)
 				return false;
 		}
 	}

@@ -71,6 +71,9 @@ public:
 	int GetBattlefieldClass() const;
 	void SetBattlefieldClass(int Class);
 	bool HasBattlefieldClass() const { return GetBattlefieldClass() != BATTLEFIELD_CLASS_NONE; }
+	const char *GetBattlefieldClassName() const;
+	// snap/display clan: localized class name, without touching real clan
+	const char *GetSnapClan(int ForClientID) const;
 	bool IsSoldier() const { return m_Soldier != 0; }
 	bool IsEngineer() const { return m_Engineer != 0; }
 	bool IsMedic() const { return m_Medic != 0; }

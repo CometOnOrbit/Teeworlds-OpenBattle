@@ -1582,13 +1582,7 @@ void CCharacter::SelectBattlefieldClass(int Class)
 		ApplyBattlefieldLoadout();
 		str_format(aBuf, sizeof(aBuf), GameServer()->Localize("You are now %s! Good luck.", m_pPlayer->GetCID()),
 			GameServer()->Localize(pName, m_pPlayer->GetCID()));
-		char aName[MAX_NAME_LENGTH];
-		char Prefix = Class == CPlayer::BATTLEFIELD_CLASS_SOLDIER ? 'A' :
-			(Class == CPlayer::BATTLEFIELD_CLASS_ENGINEER ? 'E' :
-			(Class == CPlayer::BATTLEFIELD_CLASS_MEDIC ? 'M' : 'S'));
-		str_format(aName, sizeof(aName), "[%c] %s", Prefix,
-			Server()->ClientName(m_pPlayer->GetCID()));
-		Server()->SetClientName(m_pPlayer->GetCID(), aName);
+		GameServer()->SendSixupClientInfoUpdate(m_pPlayer->GetCID());
 		GameServer()->CreatePlayerSpawn(m_Pos);
 		if(Class == CPlayer::BATTLEFIELD_CLASS_SOLDIER)
 			GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_CLASS_HINT,

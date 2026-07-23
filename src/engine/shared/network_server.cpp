@@ -540,6 +540,8 @@ int CNetServer::Send(CNetChunk *pChunk)
 		}
 		else
 		{
+			// QueueChunkEx Disconnect'd on buffer full. Drop cleans game state.
+			// Re-entrant sends during OnClientDrop hit m_Dropping / offline QueueChunk.
 			Drop(pChunk->m_ClientID, "Error sending data");
 		}
 	}

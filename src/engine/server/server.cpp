@@ -180,6 +180,7 @@ void CServer::CClient::Reset()
 	m_LastInputTick = -1;
 	m_SnapRate = CClient::SNAPRATE_INIT;
 	m_Score = 0;
+	m_Dropping = false;
 }
 
 CServer::CServer() : m_DemoRecorder(&m_SnapshotDelta)
@@ -678,6 +679,7 @@ int CServer::NewClientCallback(int ClientID, void *pUser, bool Sixup)
 	pThis->m_aClients[ClientID].m_pRconCmdToSend = 0;
 	pThis->m_aClients[ClientID].Reset();
 	pThis->m_aClients[ClientID].m_Sixup = Sixup;
+	pThis->m_aClients[ClientID].m_Dropping = false;
 	return 0;
 }
 
@@ -685,12 +687,19 @@ int CServer::DelClientCallback(int ClientID, const char *pReason, void *pUser)
 {
 	CServer *pThis = (CServer *)pUser;
 
+	// Re-entrant Drop (send failure while already dropping) — bail out.
+	if(pThis->m_aClients[ClientID].m_State == CClient::STATE_EMPTY ||
+		pThis->m_aClients[ClientID].m_Dropping)
+		return 0;
+
 	NETADDR Addr = pThis->m_NetServer.ClientAddr(ClientID);
 	char aAddrStr[NETADDR_MAXSTRSIZE];
 	net_addr_str(&Addr, aAddrStr, sizeof(aAddrStr));
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), "client dropped. cid=%d addr=%s reason='%s'", ClientID, aAddrStr,	pReason);
 	pThis->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "server", aBuf);
+
+	pThis->m_aClients[ClientID].m_Dropping = true;
 
 	// notify the mod about the drop
 	if(pThis->m_aClients[ClientID].m_State >= CClient::STATE_READY)
@@ -704,6 +713,7 @@ int CServer::DelClientCallback(int ClientID, const char *pReason, void *pUser)
 	pThis->m_aClients[ClientID].m_AuthTries = 0;
 	pThis->m_aClients[ClientID].m_pRconCmdToSend = 0;
 	pThis->m_aClients[ClientID].m_Sixup = false;
+	pThis->m_aClients[ClientID].m_Dropping = false;
 	pThis->m_aClients[ClientID].m_Snapshots.PurgeAll();
 	return 0;
 }
