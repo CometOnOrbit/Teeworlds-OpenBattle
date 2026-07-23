@@ -1213,6 +1213,9 @@ void CServer::UpdateRegisterServerInfo()
 	JsonWriter.WriteStrValue(GameServer()->GameType());
 	if(g_Config.m_SvRegisterCommunityToken[0] && g_Config.m_SvFlag != -1)
 	{
+		// DDNet community docs + some forks use "flag"; current DDNet writes "country"
+		JsonWriter.WriteAttribute("flag");
+		JsonWriter.WriteIntValue(g_Config.m_SvFlag);
 		JsonWriter.WriteAttribute("country");
 		JsonWriter.WriteIntValue(g_Config.m_SvFlag);
 	}
@@ -1891,6 +1894,8 @@ void CServer::RegisterCommands()
 
 	Console()->Chain("sv_name", ConchainSpecialInfoupdate, this);
 	Console()->Chain("password", ConchainSpecialInfoupdate, this);
+	Console()->Chain("sv_register_community_token", ConchainSpecialInfoupdate, this);
+	Console()->Chain("sv_flag", ConchainSpecialInfoupdate, this);
 
 	Console()->Chain("sv_max_clients_per_ip", ConchainMaxclientsperipUpdate, this);
 	Console()->Chain("mod_command", ConchainModCommandUpdate, this);

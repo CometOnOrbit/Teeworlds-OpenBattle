@@ -444,15 +444,15 @@ bool CRegister::OnPacket(const CNetChunk *pPacket)
 			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "register", "got erroneous challenge packet from master");
 			return true;
 		}
-		if(g_Config.m_Debug)
-			dbg_msg("register", "got challenge token, protocol='%s' token='%s'", pProtocol, pToken);
-
 		int Protocol;
 		if(ProtocolFromString(&Protocol, pProtocol))
 		{
 			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "register", "got challenge packet with unknown protocol");
 			return true;
 		}
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "got challenge token, protocol='%s'", pProtocol);
+		Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "register", aBuf);
 		OnToken(Protocol, pToken);
 		return true;
 	}

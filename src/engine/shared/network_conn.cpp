@@ -4,9 +4,19 @@
 #include "config.h"
 #include "network.h"
 
-SECURITY_TOKEN ToSecurityToken(unsigned char *pData)
+// 0.7 / DDNet master use big-endian tokens on the wire
+SECURITY_TOKEN ToSecurityToken(const unsigned char *pData)
 {
-	return (int)pData[0] | (pData[1] << 8) | (pData[2] << 16) | (pData[3] << 24);
+	return (SECURITY_TOKEN)(((unsigned)pData[0] << 24) | ((unsigned)pData[1] << 16) |
+		((unsigned)pData[2] << 8) | (unsigned)pData[3]);
+}
+
+void WriteSecurityToken(unsigned char *pData, SECURITY_TOKEN Token)
+{
+	pData[0] = (Token >> 24) & 0xff;
+	pData[1] = (Token >> 16) & 0xff;
+	pData[2] = (Token >> 8) & 0xff;
+	pData[3] = Token & 0xff;
 }
 
 void CNetConnection::ResetStats()
