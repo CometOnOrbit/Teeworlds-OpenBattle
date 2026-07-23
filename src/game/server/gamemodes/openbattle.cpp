@@ -18,7 +18,7 @@ CGameControllerOpenBattle::CGameControllerOpenBattle(class CGameContext *pGameSe
 	m_apFlags[1] = 0;
 	// Keep the CTF rules/controller but publish this derived mode as OpenBattle.
 	// That also exempts its custom tuning from CheckPureTuning().
-	m_pGameType = "OpenBattle";
+	m_pGameType = "OpenBattle|CTF";
 	m_GameFlags = GAMEFLAG_TEAMS|GAMEFLAG_FLAGS;
 }
 
