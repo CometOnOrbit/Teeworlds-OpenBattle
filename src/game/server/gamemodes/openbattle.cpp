@@ -8,9 +8,9 @@
 #include <game/server/entities/flag.h>
 #include <game/server/player.h>
 #include <game/server/gamecontext.h>
-#include "ctf.h"
+#include "openbattle.h"
 
-CGameControllerCTF::CGameControllerCTF(class CGameContext *pGameServer)
+CGameControllerOpenBattle::CGameControllerOpenBattle(class CGameContext *pGameServer)
 : IGameController(pGameServer)
 {
 	m_apFlags[0] = 0;
@@ -21,7 +21,7 @@ CGameControllerCTF::CGameControllerCTF(class CGameContext *pGameServer)
 	m_GameFlags = GAMEFLAG_TEAMS|GAMEFLAG_FLAGS;
 }
 
-bool CGameControllerCTF::OnEntity(int Index, vec2 Pos)
+bool CGameControllerOpenBattle::OnEntity(int Index, vec2 Pos)
 {
 	if(IGameController::OnEntity(Index, Pos))
 		return true;
@@ -40,7 +40,7 @@ bool CGameControllerCTF::OnEntity(int Index, vec2 Pos)
 	return true;
 }
 
-int CGameControllerCTF::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int WeaponID)
+int CGameControllerOpenBattle::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int WeaponID)
 {
 	IGameController::OnCharacterDeath(pVictim, pKiller, WeaponID);
 	int HadFlag = 0;
@@ -68,7 +68,7 @@ int CGameControllerCTF::OnCharacterDeath(class CCharacter *pVictim, class CPlaye
 	return HadFlag;
 }
 
-void CGameControllerCTF::DoWincheck()
+void CGameControllerOpenBattle::DoWincheck()
 {
 	if(m_GameOverTick == -1 && !m_Warmup)
 	{
@@ -92,7 +92,7 @@ void CGameControllerCTF::DoWincheck()
 	}
 }
 
-bool CGameControllerCTF::CanBeMovedOnBalance(int ClientID)
+bool CGameControllerOpenBattle::CanBeMovedOnBalance(int ClientID)
 {
 	CCharacter* Character = GameServer()->m_apPlayers[ClientID]->GetCharacter();
 	if(Character)
@@ -107,7 +107,7 @@ bool CGameControllerCTF::CanBeMovedOnBalance(int ClientID)
 	return true;
 }
 
-void CGameControllerCTF::Snap(int SnappingClient)
+void CGameControllerOpenBattle::Snap(int SnappingClient)
 {
 	IGameController::Snap(SnappingClient);
 
@@ -142,7 +142,7 @@ void CGameControllerCTF::Snap(int SnappingClient)
 		pGameDataObj->m_FlagCarrierBlue = FLAG_MISSING;
 }
 
-void CGameControllerCTF::Tick()
+void CGameControllerOpenBattle::Tick()
 {
 	IGameController::Tick();
 
