@@ -328,6 +328,7 @@ set_glob(ENGINE_INTERFACE GLOB src/engine
   demo.h
   engine.h
   kernel.h
+  localization.h
   map.h
   masterserver.h
   message.h
@@ -406,6 +407,15 @@ set(GAME_GENERATED_SHARED
 set(DEPS ${ZLIB_DEP})
 set(LIBS ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES} ${PLATFORM_LIBS})
 
+set_glob(DEP_JSON_SRC GLOB src/engine/external/json-parser
+  json.c
+  json.h
+)
+add_library(json EXCLUDE_FROM_ALL OBJECT ${DEP_JSON_SRC})
+set(DEP_JSON $<TARGET_OBJECTS:json>)
+list(APPEND TARGETS_OWN json)
+list(APPEND DEPS ${DEP_JSON})
+
 add_library(engine-shared EXCLUDE_FROM_ALL OBJECT
   ${ENGINE_INTERFACE} ${ENGINE_SHARED} ${ENGINE_GENERATED_SHARED} ${BASE}
 )
@@ -419,6 +429,8 @@ list(APPEND TARGETS_OWN engine-shared game-shared)
 ########################################################################
 
 set_glob(ENGINE_SERVER GLOB src/engine/server
+  localization.cpp
+  localization.h
   register.cpp
   register.h
   server.cpp
@@ -578,6 +590,7 @@ add_custom_target(everything DEPENDS ${TARGETS_OWN})
 
 if(NOT DEV)
   install(DIRECTORY maps DESTINATION share/${PROJECT_NAME} COMPONENT maps)
+  install(DIRECTORY data/server DESTINATION share/${PROJECT_NAME}/data COMPONENT server)
   install(TARGETS ${TARGET_SERVER} DESTINATION bin COMPONENT server)
   install(FILES license.txt readme.txt storage.cfg DESTINATION share/${PROJECT_NAME} COMPONENT maps)
 endif()

@@ -150,6 +150,7 @@ function build(settings)
 	end
 
 	pnglite = Compile(settings, Collect("src/engine/external/pnglite/*.c"))
+	json = Compile(settings, Collect("src/engine/external/json-parser/*.c"))
 
 	engine_settings = settings:Copy()
 	server_settings = engine_settings:Copy()
@@ -181,7 +182,7 @@ function build(settings)
 	end
 
 	server_exe = Link(server_settings, "teeworlds_srv", engine, server,
-		game_shared, game_server, zlib, server_link_other)
+		game_shared, game_server, zlib, json, server_link_other)
 
 	serverlaunch = {}
 	if platform == "macosx" then

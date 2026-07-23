@@ -114,6 +114,7 @@ public:
 	bool m_ForceBalanced;
 	int m_LastActionTick;
 	int m_TeamChangeTick;
+	char m_aLanguage[16];
 	struct
 	{
 		int m_TargetX;

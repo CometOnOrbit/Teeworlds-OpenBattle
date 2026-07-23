@@ -15,6 +15,8 @@
 #include "gameworld.h"
 #include "player.h"
 
+class ILocalization;
+
 /*
 	Tick
 		Game Context (CGameContext::tick)
@@ -40,6 +42,7 @@ class CGameContext : public IGameServer
 {
 	IServer *m_pServer;
 	class IConsole *m_pConsole;
+	class ILocalization *m_pLocalization;
 	CLayers m_Layers;
 	CCollision m_Collision;
 	CNetObjHandler m_NetObjHandler;
@@ -68,8 +71,10 @@ class CGameContext : public IGameServer
 public:
 	IServer *Server() const { return m_pServer; }
 	class IConsole *Console() { return m_pConsole; }
+	class ILocalization *Localization() { return m_pLocalization; }
 	CCollision *Collision() { return &m_Collision; }
 	CTuningParams *Tuning() { return &m_Tuning; }
+	const char *Localize(const char *pText, int ClientID);
 
 	CGameContext();
 	~CGameContext();

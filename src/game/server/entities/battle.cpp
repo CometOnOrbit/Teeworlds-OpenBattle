@@ -136,7 +136,7 @@ void CBattle::TryRepair()
 	m_RespawnTimer = Server()->TickSpeed()*10;
 
 	char aBuf[128];
-	str_format(aBuf, sizeof(aBuf), "Vehicle-Health: %i | %i", m_Health, MaxHealth(m_Type));
+	str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Vehicle-Health: %i | %i", pRepairer->GetPlayer()->GetCID()), m_Health, MaxHealth(m_Type));
 	GameServer()->SendBroadcast(aBuf, pRepairer->GetPlayer()->GetCID());
 	pRepairer->SetBattlefieldBroadcastTimer(20);
 	if(m_RepairCooldown == 0)

@@ -102,7 +102,7 @@ void CC4::Tick()
 		m_Defusing = true;
 		m_DefuserPos = pDefuser->m_Pos;
 		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "Defuse C4: %i | 70", m_DefuseProgress);
+		str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Defuse C4: %i | 70", pDefuser->GetPlayer()->GetCID()), m_DefuseProgress);
 		GameServer()->SendBroadcast(aBuf, pDefuser->GetPlayer()->GetCID());
 		pDefuser->SetBattlefieldBroadcastTimer(20);
 		if(m_DefuseProgress > 69)

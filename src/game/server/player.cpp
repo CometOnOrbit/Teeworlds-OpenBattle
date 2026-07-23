@@ -30,6 +30,7 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_SpectatorID = SPEC_FREEVIEW;
 	m_LastActionTick = Server()->Tick();
 	m_TeamChangeTick = Server()->Tick();
+	str_copy(m_aLanguage, "en", sizeof(m_aLanguage));
 }
 
 int CPlayer::GetBattlefieldClass() const
@@ -217,11 +218,22 @@ void CPlayer::OnDisconnect(const char *pReason)
 	if(Server()->ClientIngame(m_ClientID))
 	{
 		char aBuf[512];
-		if(pReason && *pReason)
-			str_format(aBuf, sizeof(aBuf), "'%s' has left the game (%s)", Server()->ClientName(m_ClientID), pReason);
-		else
-			str_format(aBuf, sizeof(aBuf), "'%s' has left the game", Server()->ClientName(m_ClientID));
-		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+		for(int i = 0; i < MAX_CLIENTS; i++)
+		{
+			if(!GameServer()->m_apPlayers[i])
+				continue;
+			if(pReason && *pReason)
+				str_format(aBuf, sizeof(aBuf), GameServer()->Localize("'%s' has left the game (%s)", i),
+					Server()->ClientName(m_ClientID), pReason);
+			else
+				str_format(aBuf, sizeof(aBuf), GameServer()->Localize("'%s' has left the game", i),
+					Server()->ClientName(m_ClientID));
+			CNetMsg_Sv_Chat Msg;
+			Msg.m_Team = 0;
+			Msg.m_ClientID = -1;
+			Msg.m_pMessage = aBuf;
+			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
+		}
 
 		str_format(aBuf, sizeof(aBuf), "leave player='%d:%s'", m_ClientID, Server()->ClientName(m_ClientID));
 		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "game", aBuf);
@@ -308,8 +320,19 @@ void CPlayer::SetTeam(int Team)
 	m_BattlefieldAimCamera = false;
 
 	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "'%s' joined the %s", Server()->ClientName(m_ClientID), GameServer()->m_pController->GetTeamName(Team));
-	GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		if(!GameServer()->m_apPlayers[i])
+			continue;
+		str_format(aBuf, sizeof(aBuf), GameServer()->Localize("'%s' joined the %s", i),
+			Server()->ClientName(m_ClientID),
+			GameServer()->Localize(GameServer()->m_pController->GetTeamName(Team), i));
+		CNetMsg_Sv_Chat Msg;
+		Msg.m_Team = 0;
+		Msg.m_ClientID = -1;
+		Msg.m_pMessage = aBuf;
+		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
+	}
 
 	KillCharacter();
 

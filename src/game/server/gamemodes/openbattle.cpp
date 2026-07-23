@@ -186,15 +186,24 @@ void CGameControllerOpenBattle::Tick()
 					GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 
 					float CaptureTime = (Server()->Tick() - F->m_GrabTick)/(float)Server()->TickSpeed();
-					if(CaptureTime <= 60)
+					for(int i = 0; i < MAX_CLIENTS; i++)
 					{
-						str_format(aBuf, sizeof(aBuf), "The %s flag was captured by '%s' (%d.%s%d seconds)", fi ? "blue" : "red", Server()->ClientName(F->m_pCarryingCharacter->GetPlayer()->GetCID()), (int)CaptureTime%60, ((int)(CaptureTime*100)%100)<10?"0":"", (int)(CaptureTime*100)%100);
+						if(!GameServer()->m_apPlayers[i])
+							continue;
+						const char *pColor = GameServer()->Localize(fi ? "blue" : "red", i);
+						if(CaptureTime <= 60)
+							str_format(aBuf, sizeof(aBuf), GameServer()->Localize("The %s flag was captured by '%s' (%d.%s%d seconds)", i),
+								pColor, Server()->ClientName(F->m_pCarryingCharacter->GetPlayer()->GetCID()),
+								(int)CaptureTime%60, ((int)(CaptureTime*100)%100)<10?"0":"", (int)(CaptureTime*100)%100);
+						else
+							str_format(aBuf, sizeof(aBuf), GameServer()->Localize("The %s flag was captured by '%s'", i),
+								pColor, Server()->ClientName(F->m_pCarryingCharacter->GetPlayer()->GetCID()));
+						CNetMsg_Sv_Chat Msg;
+						Msg.m_Team = 0;
+						Msg.m_ClientID = -1;
+						Msg.m_pMessage = aBuf;
+						Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
 					}
-					else
-					{
-						str_format(aBuf, sizeof(aBuf), "The %s flag was captured by '%s'", fi ? "blue" : "red", Server()->ClientName(F->m_pCarryingCharacter->GetPlayer()->GetCID()));
-					}
-					GameServer()->SendChat(-1, -2, aBuf);
 					for(int i = 0; i < 2; i++)
 						m_apFlags[i]->Reset();
 

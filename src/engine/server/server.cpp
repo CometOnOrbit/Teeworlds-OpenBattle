@@ -7,6 +7,7 @@
 #include <engine/config.h>
 #include <engine/console.h>
 #include <engine/engine.h>
+#include <engine/localization.h>
 #include <engine/map.h>
 #include <engine/masterserver.h>
 #include <engine/server.h>
@@ -1694,6 +1695,8 @@ int main(int argc, const char **argv) // ignore_convention
 	IEngineMasterServer *pEngineMasterServer = CreateEngineMasterServer();
 	IStorage *pStorage = CreateStorage("Teeworlds", argc, argv); // ignore_convention
 	IConfig *pConfig = CreateConfig();
+	ILocalization *pLocalization = CreateLocalization(pStorage);
+	pLocalization->Init();
 
 	pServer->InitRegister(&pServer->m_NetServer, pEngineMasterServer, pConsole);
 
@@ -1708,6 +1711,7 @@ int main(int argc, const char **argv) // ignore_convention
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pConsole);
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pStorage);
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pConfig);
+		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pLocalization);
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(static_cast<IEngineMasterServer*>(pEngineMasterServer)); // register as both
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(static_cast<IMasterServer*>(pEngineMasterServer));
 

@@ -450,7 +450,7 @@ void CCharacter::FireWeapon()
 		if(m_Input.m_Jump && m_pPlayer->HasHarpoon() && m_HarpoonAmmo > 0)
 		{
 			char aBuf[128];
-			str_format(aBuf, sizeof(aBuf), "Force: %i ; Ammo: %i",
+			str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Force: %i ; Ammo: %i", m_pPlayer->GetCID()),
 				m_HarpoonCharge/20, m_HarpoonAmmo);
 			GameServer()->SendBroadcast(aBuf, m_pPlayer->GetCID());
 			m_BroadcastClearTimer = 50;
@@ -483,7 +483,7 @@ void CCharacter::FireWeapon()
 			m_ArrowAmmo--;
 			m_WaterWeaponCooldown = round_to_int(Server()->TickSpeed()*0.4f);
 			char aBuf[64];
-			str_format(aBuf, sizeof(aBuf), "Ammo: %i", m_ArrowAmmo);
+			str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Ammo: %i", m_pPlayer->GetCID()), m_ArrowAmmo);
 			GameServer()->SendBroadcast(aBuf, m_pPlayer->GetCID());
 			m_BroadcastClearTimer = 50;
 		}
@@ -496,7 +496,7 @@ void CCharacter::FireWeapon()
 			m_ThrowingStarAmmo--;
 			m_WaterWeaponCooldown = round_to_int(Server()->TickSpeed()*0.8f);
 			char aBuf[64];
-			str_format(aBuf, sizeof(aBuf), "Ammo: %i", m_ThrowingStarAmmo);
+			str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Ammo: %i", m_pPlayer->GetCID()), m_ThrowingStarAmmo);
 			GameServer()->SendBroadcast(aBuf, m_pPlayer->GetCID());
 			m_BroadcastClearTimer = 50;
 		}
@@ -650,7 +650,7 @@ void CCharacter::FireWeapon()
 				m_NumMines++;
 				m_MinesSinceSupply++;
 				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), "Mine placed %i/3!.", m_NumMines);
+				str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Mine placed %i/3!.", m_pPlayer->GetCID()), m_NumMines);
 				GameServer()->SendChatTarget(m_pPlayer->GetCID(), aBuf);
 			}
 			else if(m_pPlayer->IsMedic())
@@ -665,7 +665,7 @@ void CCharacter::FireWeapon()
 				m_NumAmmoPacks++;
 				m_DeployCooldown = Server()->TickSpeed()*5;
 				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), "Ammo-Pack placed %i/2!.", m_NumAmmoPacks);
+				str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Ammo-Pack placed %i/2!.", m_pPlayer->GetCID()), m_NumAmmoPacks);
 				GameServer()->SendChatTarget(m_pPlayer->GetCID(), aBuf);
 			}
 
@@ -858,7 +858,7 @@ void CCharacter::FireWeapon()
 				m_C4SinceSupply++;
 				char aBuf[128];
 				str_format(aBuf, sizeof(aBuf),
-					"C4 placed %i/3!. Press right-mouse to explode!", m_NumC4);
+					GameServer()->Localize("C4 placed %i/3!. Press right-mouse to explode!", m_pPlayer->GetCID()), m_NumC4);
 				GameServer()->SendChatTarget(m_pPlayer->GetCID(), aBuf);
 				GameServer()->CreateSound(m_Pos, SOUND_GRENADE_FIRE);
 			}
@@ -1002,7 +1002,7 @@ void CCharacter::HandleTiles()
 	if(m_pPlayer->IsSniper())
 	{
 		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), "Invisiblepower: %i | %i",
+		str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Invisiblepower: %i | %i", m_pPlayer->GetCID()),
 			m_InvisibilityPower, Server()->TickSpeed()*5);
 		GameServer()->SendBroadcast(aBuf, m_pPlayer->GetCID());
 		m_BroadcastClearTimer = 5;
@@ -1173,7 +1173,7 @@ void CCharacter::HandleOther()
 		m_BattlefieldVehicleType != BATTLEFIELD_VEHICLE_MINI)
 	{
 		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "Vehicle-Health: %i/%i",
+		str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Vehicle-Health: %i/%i", m_pPlayer->GetCID()),
 			m_BattlefieldVehicleHealth,
 			CBattle::MaxHealth(m_BattlefieldVehicleType));
 		GameServer()->SendBroadcast(aBuf, m_pPlayer->GetCID());
@@ -1387,11 +1387,11 @@ void CCharacter::Act()
 
 	char aBuf[128];
 	if(m_pPlayer->IsEngineer())
-		str_format(aBuf, sizeof(aBuf), "Mines now aviable: %i/3!.", 3-m_NumMines);
+		str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Mines now aviable: %i/3!.", m_pPlayer->GetCID()), 3-m_NumMines);
 	else if(m_pPlayer->IsMedic())
-		str_format(aBuf, sizeof(aBuf), "Health-Kit now aviable %i/1!.", 1-m_NumHealthKits);
+		str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Health-Kit now aviable %i/1!.", m_pPlayer->GetCID()), 1-m_NumHealthKits);
 	else if(m_pPlayer->IsSoldier())
-		str_format(aBuf, sizeof(aBuf), "Ammo-Pack now aviable %i/2!.", 2-m_NumAmmoPacks);
+		str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Ammo-Pack now aviable %i/2!.", m_pPlayer->GetCID()), 2-m_NumAmmoPacks);
 	else
 		return;
 	GameServer()->SendChatTarget(m_pPlayer->GetCID(), aBuf);
@@ -1413,16 +1413,23 @@ void CCharacter::RegisterBattlefieldKill(bool CountKill)
 		m_KillStreak == 15 ? "INSANE" :
 		m_KillStreak == 20 ? "GODLIKE" : "an ICE COLD KILLER";
 	char aBuf[256];
-	str_format(aBuf, sizeof(aBuf), "%s is %s and got 5 sec God-Mode!",
-		Server()->ClientName(m_pPlayer->GetCID()), pTitle);
-	if(m_KillStreak != 5)
-		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		if(!GameServer()->m_apPlayers[i])
+			continue;
+		str_format(aBuf, sizeof(aBuf), GameServer()->Localize("%s is %s and got 5 sec God-Mode!", i),
+			Server()->ClientName(m_pPlayer->GetCID()),
+			GameServer()->Localize(pTitle, i));
+		CNetMsg_Sv_Chat Msg;
+		Msg.m_Team = 0;
+		Msg.m_ClientID = -1;
+		Msg.m_pMessage = aBuf;
+		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
+	}
 	GameServer()->SendChatTarget(m_pPlayer->GetCID(),
 		"You got 5 sec God-Mod! Good job!");
 	for(int Slot = 1; Slot <= 3; Slot++)
 		new CShield(GameWorld(), m_Pos, m_pPlayer->GetCID(), 4, true, Slot);
-	if(m_KillStreak == 5)
-		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 }
 
 void CCharacter::HandGrenade()
@@ -1568,12 +1575,14 @@ void CCharacter::SelectBattlefieldClass(int Class)
 
 	char aBuf[128];
 	if(m_pPlayer->GetBattlefieldClass() == Class)
-		str_format(aBuf, sizeof(aBuf), "You are already %s.", pName);
+		str_format(aBuf, sizeof(aBuf), GameServer()->Localize("You are already %s.", m_pPlayer->GetCID()),
+			GameServer()->Localize(pName, m_pPlayer->GetCID()));
 	else
 	{
 		m_pPlayer->SetBattlefieldClass(Class);
 		ApplyBattlefieldLoadout();
-		str_format(aBuf, sizeof(aBuf), "You are now %s! Good luck.", pName);
+		str_format(aBuf, sizeof(aBuf), GameServer()->Localize("You are now %s! Good luck.", m_pPlayer->GetCID()),
+			GameServer()->Localize(pName, m_pPlayer->GetCID()));
 		char aName[MAX_NAME_LENGTH];
 		char Prefix = Class == CPlayer::BATTLEFIELD_CLASS_SOLDIER ? 'A' :
 			(Class == CPlayer::BATTLEFIELD_CLASS_ENGINEER ? 'E' :
@@ -2004,7 +2013,7 @@ void CCharacter::HandleBattlefieldEngineerAbilities()
 		if(pTarget->RepairBattlefieldVehicle(Amount))
 		{
 			char aBuf[128];
-			str_format(aBuf, sizeof(aBuf), "Vehicle-Health: %i | %i",
+			str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Vehicle-Health: %i | %i", m_pPlayer->GetCID()),
 				HealthBeforeRepair,
 				CBattle::MaxHealth(pTarget->m_BattlefieldVehicleType));
 			GameServer()->SendBroadcast(aBuf, m_pPlayer->GetCID());
@@ -2906,7 +2915,7 @@ void CCharacter::JetFly(vec2 Aim, vec2 &Vel, vec2 &Pos, float &MaxSpeed, bool &F
 	}
 
 	char aBuf[128];
-	str_format(aBuf, sizeof(aBuf), "Speed: %i | 60, Health: %i | 10",
+	str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Speed: %i | 60, Health: %i | 10", m_pPlayer->GetCID()),
 		m_BattlefieldVehicleSpeed, m_BattlefieldVehicleHealth);
 	GameServer()->SendBroadcast(aBuf, m_pPlayer->GetCID());
 	m_BroadcastClearTimer = 3;
@@ -3240,9 +3249,18 @@ void CCharacter::Check(int Checkpoint)
 				GameServer()->m_aCheckpointWarningCooldown[TEAM_RED] == 0)
 			{
 				char aBuf[256];
-				str_format(aBuf, sizeof(aBuf), "[Warning] Red-Team is attacking Checkpoint %c!",
-					'A'+Index);
-				GameServer()->SendChat(-1, CGameContext::CHAT_BLUE, aBuf);
+				for(int i = 0; i < MAX_CLIENTS; i++)
+				{
+					if(!GameServer()->m_apPlayers[i] || GameServer()->m_apPlayers[i]->GetTeam() != TEAM_BLUE)
+						continue;
+					str_format(aBuf, sizeof(aBuf), GameServer()->Localize("[Warning] Red-Team is attacking Checkpoint %c!", i),
+						'A'+Index);
+					CNetMsg_Sv_Chat Msg;
+					Msg.m_Team = 1;
+					Msg.m_ClientID = -1;
+					Msg.m_pMessage = aBuf;
+					Server()->SendPackMsg(&Msg, MSGFLAG_VITAL|MSGFLAG_NORECORD, i);
+				}
 				GameServer()->m_aCheckpointWarning[Index][TEAM_RED] = true;
 				GameServer()->m_aCheckpointWarningCooldown[TEAM_RED] = Server()->TickSpeed()*15;
 			}
@@ -3254,9 +3272,18 @@ void CCharacter::Check(int Checkpoint)
 				GameServer()->m_aCheckpointWarningCooldown[TEAM_BLUE] == 0)
 			{
 				char aBuf[256];
-				str_format(aBuf, sizeof(aBuf), "[Warning] Blue-Team is attacking Checkpoint %c!",
-					'A'+Index);
-				GameServer()->SendChat(-1, CGameContext::CHAT_RED, aBuf);
+				for(int i = 0; i < MAX_CLIENTS; i++)
+				{
+					if(!GameServer()->m_apPlayers[i] || GameServer()->m_apPlayers[i]->GetTeam() != TEAM_RED)
+						continue;
+					str_format(aBuf, sizeof(aBuf), GameServer()->Localize("[Warning] Blue-Team is attacking Checkpoint %c!", i),
+						'A'+Index);
+					CNetMsg_Sv_Chat Msg;
+					Msg.m_Team = 1;
+					Msg.m_ClientID = -1;
+					Msg.m_pMessage = aBuf;
+					Server()->SendPackMsg(&Msg, MSGFLAG_VITAL|MSGFLAG_NORECORD, i);
+				}
 				GameServer()->m_aCheckpointWarning[Index][TEAM_BLUE] = true;
 				GameServer()->m_aCheckpointWarningCooldown[TEAM_BLUE] = Server()->TickSpeed()*15;
 			}
@@ -3294,10 +3321,19 @@ void CCharacter::Check(int Checkpoint)
 		GameServer()->CreateSound(m_Pos, SOUND_CTF_CAPTURE);
 
 		char aBuf[256];
-		str_format(aBuf, sizeof(aBuf), "%s-Team (%s) captured Checkpoint %c!",
-			CapturingTeam == TEAM_RED ? "Red" : "Blue",
-			Server()->ClientName(m_pPlayer->GetCID()), 'A'+Index);
-		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+		for(int i = 0; i < MAX_CLIENTS; i++)
+		{
+			if(!GameServer()->m_apPlayers[i])
+				continue;
+			str_format(aBuf, sizeof(aBuf), GameServer()->Localize("%s-Team (%s) captured Checkpoint %c!", i),
+				GameServer()->Localize(CapturingTeam == TEAM_RED ? "Red" : "Blue", i),
+				Server()->ClientName(m_pPlayer->GetCID()), 'A'+Index);
+			CNetMsg_Sv_Chat Msg;
+			Msg.m_Team = 0;
+			Msg.m_ClientID = -1;
+			Msg.m_pMessage = aBuf;
+			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
+		}
 	}
 
 	// Emit SOUND_HOOK_NOATTACH at every 80-point milestone,
@@ -3374,7 +3410,8 @@ void CCharacter::Tick()
 	if(m_pPlayer->m_ForceBalanced)
 	{
 		char Buf[128];
-		str_format(Buf, sizeof(Buf), "You were moved to %s due to team balancing", GameServer()->m_pController->GetTeamName(m_pPlayer->GetTeam()));
+		str_format(Buf, sizeof(Buf), GameServer()->Localize("You were moved to %s due to team balancing", m_pPlayer->GetCID()),
+			GameServer()->Localize(GameServer()->m_pController->GetTeamName(m_pPlayer->GetTeam()), m_pPlayer->GetCID()));
 		GameServer()->SendBroadcast(Buf, m_pPlayer->GetCID());
 
 		m_pPlayer->m_ForceBalanced = false;

@@ -1,0 +1,456 @@
+{
+    "translation": [
+        {
+            "key": "%s is %s and got 5 sec God-Mode!",
+            "value": "%s is %s and got 5 sec God-Mode!"
+        },
+        {
+            "key": "%s-Team (%s) captured Checkpoint %c!",
+            "value": "%s-Team (%s) captured Checkpoint %c!"
+        },
+        {
+            "key": "'%s' called for vote to kick '%s' (%s)",
+            "value": "'%s' called for vote to kick '%s' (%s)"
+        },
+        {
+            "key": "'%s' called for vote to kick you",
+            "value": "'%s' called for vote to kick you"
+        },
+        {
+            "key": "'%s' called for vote to move '%s' to spectators (%s)",
+            "value": "'%s' called for vote to move '%s' to spectators (%s)"
+        },
+        {
+            "key": "'%s' called vote to change server option '%s' (%s)",
+            "value": "'%s' called vote to change server option '%s' (%s)"
+        },
+        {
+            "key": "'%s' changed name to '%s'",
+            "value": "'%s' changed name to '%s'"
+        },
+        {
+            "key": "'%s' entered and joined the %s",
+            "value": "'%s' entered and joined the %s"
+        },
+        {
+            "key": "'%s' has left the game",
+            "value": "'%s' has left the game"
+        },
+        {
+            "key": "'%s' has left the game (%s)",
+            "value": "'%s' has left the game (%s)"
+        },
+        {
+            "key": "'%s' isn't an option on this server",
+            "value": "'%s' isn't an option on this server"
+        },
+        {
+            "key": "'%s' joined the %s",
+            "value": "'%s' joined the %s"
+        },
+        {
+            "key": "Ammo-Pack now aviable %i/2!.",
+            "value": "Ammo-Pack now aviable %i/2!."
+        },
+        {
+            "key": "Ammo-Pack placed %i/2!.",
+            "value": "Ammo-Pack placed %i/2!."
+        },
+        {
+            "key": "Ammo: %i",
+            "value": "Ammo: %i"
+        },
+        {
+            "key": "Blue",
+            "value": "Blue"
+        },
+        {
+            "key": "C4 placed %i/3!. Press right-mouse to explode!",
+            "value": "C4 placed %i/3!. Press right-mouse to explode!"
+        },
+        {
+            "key": "Can't place more C4!",
+            "value": "Can't place more C4!"
+        },
+        {
+            "key": "Choose a class first!",
+            "value": "Choose a class first!"
+        },
+        {
+            "key": "Current language: %s",
+            "value": "Current language: %s"
+        },
+        {
+            "key": "Defuse C4: %i | 70",
+            "value": "Defuse C4: %i | 70"
+        },
+        {
+            "key": "Defuse Mine: %i | 70",
+            "value": "Defuse Mine: %i | 70"
+        },
+        {
+            "key": "Engineer",
+            "value": "Engineer"
+        },
+        {
+            "key": "Force: %i ; Ammo: %i",
+            "value": "Force: %i ; Ammo: %i"
+        },
+        {
+            "key": "GODLIKE",
+            "value": "GODLIKE"
+        },
+        {
+            "key": "Grenade lost signale!",
+            "value": "Grenade lost signale!"
+        },
+        {
+            "key": "Hacking Enemy-Door: %i | 125",
+            "value": "Hacking Enemy-Door: %i | 125"
+        },
+        {
+            "key": "Hand-Grenade fired, get an ammopack for new one!.",
+            "value": "Hand-Grenade fired, get an ammopack for new one!."
+        },
+        {
+            "key": "Health-Kit now aviable %i/1!.",
+            "value": "Health-Kit now aviable %i/1!."
+        },
+        {
+            "key": "INSANE",
+            "value": "INSANE"
+        },
+        {
+            "key": "Invalid client id to kick",
+            "value": "Invalid client id to kick"
+        },
+        {
+            "key": "Invalid client id to move",
+            "value": "Invalid client id to move"
+        },
+        {
+            "key": "Invalid spectator id used",
+            "value": "Invalid spectator id used"
+        },
+        {
+            "key": "Invisiblepower: %i | %i",
+            "value": "Invisiblepower: %i | %i"
+        },
+        {
+            "key": "Kick '%s'",
+            "value": "Kick '%s'"
+        },
+        {
+            "key": "Kick voting requires %d players on the server",
+            "value": "Kick voting requires %d players on the server"
+        },
+        {
+            "key": "Kicked for inactivity",
+            "value": "Kicked for inactivity"
+        },
+        {
+            "key": "Language set to '%s'",
+            "value": "Language set to '%s'"
+        },
+        {
+            "key": "Medic",
+            "value": "Medic"
+        },
+        {
+            "key": "Mine placed %i/3!.",
+            "value": "Mine placed %i/3!."
+        },
+        {
+            "key": "Mines now aviable: %i/3!.",
+            "value": "Mines now aviable: %i/3!."
+        },
+        {
+            "key": "No reason given",
+            "value": "No reason given"
+        },
+        {
+            "key": "Only %d active players are allowed",
+            "value": "Only %d active players are allowed"
+        },
+        {
+            "key": "OpenBattle - open-source version by Comet",
+            "value": "OpenBattle - open-source version by Comet"
+        },
+        {
+            "key": "OpenBattle by Comet",
+            "value": "OpenBattle by Comet"
+        },
+        {
+            "key": "Original mod by FuN~EleFant.",
+            "value": "Original mod by FuN~EleFant."
+        },
+        {
+            "key": "Press shift or write /e to get out of the vehicles.",
+            "value": "Press shift or write /e to get out of the vehicles."
+        },
+        {
+            "key": "Red",
+            "value": "Red"
+        },
+        {
+            "key": "Server does not allow voting to kick players",
+            "value": "Server does not allow voting to kick players"
+        },
+        {
+            "key": "Server does not allow voting to move players to spectators",
+            "value": "Server does not allow voting to move players to spectators"
+        },
+        {
+            "key": "Sniper",
+            "value": "Sniper"
+        },
+        {
+            "key": "Soldier",
+            "value": "Soldier"
+        },
+        {
+            "key": "Spectators aren't allowed to start a vote.",
+            "value": "Spectators aren't allowed to start a vote."
+        },
+        {
+            "key": "Speed: %i | 60, Health: %i | 10",
+            "value": "Speed: %i | 60, Health: %i | 10"
+        },
+        {
+            "key": "Switched Type to [aim control]",
+            "value": "Switched Type to [aim control]"
+        },
+        {
+            "key": "Switched Type to [manual control]",
+            "value": "Switched Type to [manual control]"
+        },
+        {
+            "key": "Teams have been balanced",
+            "value": "Teams have been balanced"
+        },
+        {
+            "key": "Teams must be balanced, please join other team",
+            "value": "Teams must be balanced, please join other team"
+        },
+        {
+            "key": "That isn't your Base!",
+            "value": "That isn't your Base!"
+        },
+        {
+            "key": "The %s flag was captured by '%s'",
+            "value": "The %s flag was captured by '%s'"
+        },
+        {
+            "key": "The %s flag was captured by '%s' (%d.%s%d seconds)",
+            "value": "The %s flag was captured by '%s' (%d.%s%d seconds)"
+        },
+        {
+            "key": "This Mod based on the Idea of Battlefield.",
+            "value": "This Mod based on the Idea of Battlefield."
+        },
+        {
+            "key": "This is the door of the enemys, you can't use it!",
+            "value": "This is the door of the enemys, you can't use it!"
+        },
+        {
+            "key": "Time to wait before changing team: %02d:%02d",
+            "value": "Time to wait before changing team: %02d:%02d"
+        },
+        {
+            "key": "To far away from the station! Go back with your cursor!",
+            "value": "To far away from the station! Go back with your cursor!"
+        },
+        {
+            "key": "Usage: /language zh-cn",
+            "value": "Usage: /language zh-cn"
+        },
+        {
+            "key": "Vehicle-Health: %i | %i",
+            "value": "Vehicle-Health: %i | %i"
+        },
+        {
+            "key": "Vehicle-Health: %i/%i",
+            "value": "Vehicle-Health: %i/%i"
+        },
+        {
+            "key": "Vote aborted",
+            "value": "Vote aborted"
+        },
+        {
+            "key": "Vote failed",
+            "value": "Vote failed"
+        },
+        {
+            "key": "Vote passed",
+            "value": "Vote passed"
+        },
+        {
+            "key": "Wait for current vote to end before calling a new one.",
+            "value": "Wait for current vote to end before calling a new one."
+        },
+        {
+            "key": "Water-Weapon = Arrows. Only usable in water. Press Spacebar to fire it.",
+            "value": "Water-Weapon = Arrows. Only usable in water. Press Spacebar to fire it."
+        },
+        {
+            "key": "Water-Weapon = Harpoon. Only usable in water. Press Spacebar to fire it.",
+            "value": "Water-Weapon = Harpoon. Only usable in water. Press Spacebar to fire it."
+        },
+        {
+            "key": "Water-Weapon = Throwing-Star. Only usable in water. Press Spacebar to fire it.",
+            "value": "Water-Weapon = Throwing-Star. Only usable in water. Press Spacebar to fire it."
+        },
+        {
+            "key": "You are already %s.",
+            "value": "You are already %s."
+        },
+        {
+            "key": "You are no longer invisible! Switch to Hammer to regenerate your Invispower.",
+            "value": "You are no longer invisible! Switch to Hammer to regenerate your Invispower."
+        },
+        {
+            "key": "You are no longer invisible.",
+            "value": "You are no longer invisible."
+        },
+        {
+            "key": "You are now %s! Good luck.",
+            "value": "You are now %s! Good luck."
+        },
+        {
+            "key": "You are now invisible.",
+            "value": "You are now invisible."
+        },
+        {
+            "key": "You can only give all 10 seconds ammo for yourself!",
+            "value": "You can only give all 10 seconds ammo for yourself!"
+        },
+        {
+            "key": "You can't kick admins",
+            "value": "You can't kick admins"
+        },
+        {
+            "key": "You can't kick yourself",
+            "value": "You can't kick yourself"
+        },
+        {
+            "key": "You can't move yourself",
+            "value": "You can't move yourself"
+        },
+        {
+            "key": "You don't have the key for this vehicle!",
+            "value": "You don't have the key for this vehicle!"
+        },
+        {
+            "key": "You got 5 sec God-Mod! Good job!",
+            "value": "You got 5 sec God-Mod! Good job!"
+        },
+        {
+            "key": "You have already this Water-Weapon.",
+            "value": "You have already this Water-Weapon."
+        },
+        {
+            "key": "You must wait %d seconds before making another vote",
+            "value": "You must wait %d seconds before making another vote"
+        },
+        {
+            "key": "You were moved to %s due to team balancing",
+            "value": "You were moved to %s due to team balancing"
+        },
+        {
+            "key": "Your Team hasn't this Checkpoint!",
+            "value": "Your Team hasn't this Checkpoint!"
+        },
+        {
+            "key": "[Warning] Blue-Team is attacking Checkpoint %c!",
+            "value": "[Warning] Blue-Team is attacking Checkpoint %c!"
+        },
+        {
+            "key": "[Warning] Red-Team is attacking Checkpoint %c!",
+            "value": "[Warning] Red-Team is attacking Checkpoint %c!"
+        },
+        {
+            "key": "admin forced server option '%s' (%s)",
+            "value": "admin forced server option '%s' (%s)"
+        },
+        {
+            "key": "admin forced vote %s",
+            "value": "admin forced vote %s"
+        },
+        {
+            "key": "admin moved '%s' to spectator (%s)",
+            "value": "admin moved '%s' to spectator (%s)"
+        },
+        {
+            "key": "an ICE COLD KILLER",
+            "value": "an ICE COLD KILLER"
+        },
+        {
+            "key": "blue",
+            "value": "blue"
+        },
+        {
+            "key": "blue team",
+            "value": "blue team"
+        },
+        {
+            "key": "entred Anti-Aircraft Cannon.",
+            "value": "entred Anti-Aircraft Cannon."
+        },
+        {
+            "key": "entred Anti-Tank-Cannon, scroll to switch aim-type.",
+            "value": "entred Anti-Tank-Cannon, scroll to switch aim-type."
+        },
+        {
+            "key": "game",
+            "value": "game"
+        },
+        {
+            "key": "move '%s' to spectators",
+            "value": "move '%s' to spectators"
+        },
+        {
+            "key": "no such command",
+            "value": "no such command"
+        },
+        {
+            "key": "on Ramapage",
+            "value": "on Ramapage"
+        },
+        {
+            "key": "on a Killing Spree",
+            "value": "on a Killing Spree"
+        },
+        {
+            "key": "overflow!",
+            "value": "overflow!"
+        },
+        {
+            "key": "red",
+            "value": "red"
+        },
+        {
+            "key": "red team",
+            "value": "red team"
+        },
+        {
+            "key": "spectators",
+            "value": "spectators"
+        },
+        {
+            "key": "write /help for Infos about the Game",
+            "value": "write /help for Infos about the Game"
+        },
+        {
+            "key": "write /info for credits and version",
+            "value": "write /info for credits and version"
+        },
+        {
+            "key": "write /info for more informations",
+            "value": "write /info for more informations"
+        },
+        {
+            "key": "write /language <code> to change language",
+            "value": "write /language <code> to change language"
+        }
+    ]
+}

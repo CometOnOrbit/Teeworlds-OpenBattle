@@ -84,7 +84,7 @@ bool CSwitch::HitCharacter()
 			m_Hacking = true;
 			m_HackerPos = pHacker->m_Pos;
 			char aBuf[128];
-			str_format(aBuf, sizeof(aBuf), "Hacking Enemy-Door: %i | 125", m_HackProgress);
+			str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Hacking Enemy-Door: %i | 125", pHacker->GetPlayer()->GetCID()), m_HackProgress);
 			GameServer()->SendBroadcast(aBuf, pHacker->GetPlayer()->GetCID());
 			pHacker->SetBattlefieldBroadcastTimer(20);
 			if(m_HackProgress >= 125)

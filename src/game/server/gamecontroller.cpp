@@ -625,7 +625,7 @@ void IGameController::Tick()
 								if(GameServer()->m_apPlayers[j] && GameServer()->m_apPlayers[j]->GetTeam() == TEAM_SPECTATORS)
 									++Spectators;
 							if(Spectators >= g_Config.m_SvSpectatorSlots)
-								Server()->Kick(i, "Kicked for inactivity");
+								Server()->Kick(i, GameServer()->Localize("Kicked for inactivity", i));
 							else
 								GameServer()->m_apPlayers[i]->SetTeam(TEAM_SPECTATORS);
 						}
@@ -633,7 +633,7 @@ void IGameController::Tick()
 					case 2:
 						{
 							// kick the player
-							Server()->Kick(i, "Kicked for inactivity");
+							Server()->Kick(i, GameServer()->Localize("Kicked for inactivity", i));
 						}
 					}
 				}
