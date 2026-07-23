@@ -826,7 +826,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 			{
 				const char *pVersion = Unpacker.GetString(CUnpacker::SANITIZE_CC);
 				bool VersionOk = str_comp(pVersion, GameServer()->NetVersion()) == 0
-					|| (m_aClients[ClientID].m_Sixup && str_comp(pVersion, "0.7 802f1be60a05665f") == 0);
+					|| (m_aClients[ClientID].m_Sixup && str_comp_num(pVersion, "0.7 ", 4) == 0);
 				if(!VersionOk)
 				{
 					// wrong version
@@ -1211,9 +1211,9 @@ void CServer::UpdateRegisterServerInfo()
 	JsonWriter.WriteBoolValue(g_Config.m_Password[0] != 0);
 	JsonWriter.WriteAttribute("game_type");
 	JsonWriter.WriteStrValue(GameServer()->GameType());
-	if(g_Config.m_SvRegisterCommunityToken[0] && g_Config.m_SvFlag != -1)
+	// region flag for browser (ISO 3166-1 numeric); community needs Community-Token header
+	if(g_Config.m_SvFlag != -1)
 	{
-		// DDNet community docs + some forks use "flag"; current DDNet writes "country"
 		JsonWriter.WriteAttribute("flag");
 		JsonWriter.WriteIntValue(g_Config.m_SvFlag);
 		JsonWriter.WriteAttribute("country");
@@ -1231,7 +1231,14 @@ void CServer::UpdateRegisterServerInfo()
 	JsonWriter.WriteIntValue(m_CurrentMapSize);
 	JsonWriter.EndObject();
 	JsonWriter.WriteAttribute("version");
-	JsonWriter.WriteStrValue(GameServer()->Version());
+	if(g_Config.m_SvSixup)
+	{
+		char aVersion[64];
+		str_format(aVersion, sizeof(aVersion), "0.7↔%s", GameServer()->Version());
+		JsonWriter.WriteStrValue(aVersion);
+	}
+	else
+		JsonWriter.WriteStrValue(GameServer()->Version());
 	JsonWriter.WriteAttribute("client_score_kind");
 	JsonWriter.WriteStrValue("points");
 	JsonWriter.WriteAttribute("requires_login");

@@ -72,9 +72,16 @@ int CRegister::SendRegister(void *pUser)
 	int InfoSerial;
 	bool SendInfo;
 	{
+		lock_wait(pContext->m_pParent->m_aProtocols[Protocol].m_Lock);
+		const int ProtoStatus = pContext->m_pParent->m_aProtocols[Protocol].m_LastResponseStatus;
+		lock_release(pContext->m_pParent->m_aProtocols[Protocol].m_Lock);
+
 		lock_wait(pContext->m_pParent->m_Lock);
 		InfoSerial = pContext->m_pParent->m_InfoSerial;
-		SendInfo = InfoSerial > pContext->m_pParent->m_LastSuccessfulInfoSerial;
+		// keep sending info until this protocol line is OK (ipv4/0.6 must
+		// carry community/flag even if another line registered first)
+		SendInfo = InfoSerial > pContext->m_pParent->m_LastSuccessfulInfoSerial
+			|| ProtoStatus != STATUS_OK;
 		lock_release(pContext->m_pParent->m_Lock);
 	}
 
@@ -128,7 +135,7 @@ int CRegister::SendRegister(void *pUser)
 	char aBuf[256];
 	if(Register.Result() != 0)
 	{
-		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, ProtocolToSystem(Protocol), "error sending request to master");
+		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, ProtocolToSystem(Protocol), "error sending request to master");
 		return -1;
 	}
 
@@ -136,20 +143,20 @@ int CRegister::SendRegister(void *pUser)
 	json_value *pJson = Parser.ParseData(Register.ReceivedData(), Register.ReceivedDataSize());
 	if(!pJson)
 	{
-		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, ProtocolToSystem(Protocol), "non-JSON response from master");
+		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, ProtocolToSystem(Protocol), "non-JSON response from master");
 		return -2;
 	}
 	const json_value &rStatusString = (*pJson)["status"];
 	if(rStatusString.type != json_string)
 	{
-		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, ProtocolToSystem(Protocol), "invalid JSON response from master");
+		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, ProtocolToSystem(Protocol), "invalid JSON response from master");
 		return -3;
 	}
 	int Status;
 	if(StatusFromString(&Status, rStatusString))
 	{
 		str_format(aBuf, sizeof(aBuf), "invalid status from master: %s", (const char *)rStatusString);
-		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, ProtocolToSystem(Protocol), aBuf);
+		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, ProtocolToSystem(Protocol), aBuf);
 		return -4;
 	}
 	if(Status == STATUS_ERROR)
@@ -157,17 +164,17 @@ int CRegister::SendRegister(void *pUser)
 		const json_value &rMessage = (*pJson)["message"];
 		if(rMessage.type != json_string)
 		{
-			pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, ProtocolToSystem(Protocol), "invalid JSON error response from master");
+			pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, ProtocolToSystem(Protocol), "invalid JSON error response from master");
 			return -5;
 		}
 		str_format(aBuf, sizeof(aBuf), "error response from master: %d: %s", Register.ResponseCode(), (const char *)rMessage);
-		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, ProtocolToSystem(Protocol), aBuf);
+		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, ProtocolToSystem(Protocol), aBuf);
 		return -6;
 	}
 	if(Register.ResponseCode() >= 400)
 	{
 		str_format(aBuf, sizeof(aBuf), "non-success status code %d from master without error code", Register.ResponseCode());
-		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, ProtocolToSystem(Protocol), aBuf);
+		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, ProtocolToSystem(Protocol), aBuf);
 		return -7;
 	}
 
@@ -175,19 +182,19 @@ int CRegister::SendRegister(void *pUser)
 		lock_wait(pContext->m_pParent->m_aProtocols[Protocol].m_Lock);
 		if(Status != pContext->m_pParent->m_aProtocols[Protocol].m_LastResponseStatus)
 		{
-			if(Status != STATUS_OK)
-			{
-				if(g_Config.m_Debug)
-					dbg_msg(ProtocolToSystem(Protocol), "status: %s", (const char *)rStatusString);
-			}
+			if(Status == STATUS_OK)
+				pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, ProtocolToSystem(Protocol), "successfully registered");
 			else
-				pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, ProtocolToSystem(Protocol), "successfully registered");
+			{
+				str_format(aBuf, sizeof(aBuf), "status: %s", (const char *)rStatusString);
+				pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, ProtocolToSystem(Protocol), aBuf);
+			}
 		}
 		if(Status == pContext->m_pParent->m_aProtocols[Protocol].m_LastResponseStatus && Status == STATUS_NEEDCHALLENGE)
 		{
-			pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, ProtocolToSystem(Protocol), "ERROR: the master server reports that clients can not connect to this server.");
+			pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, ProtocolToSystem(Protocol), "ERROR: the master server reports that clients can not connect to this server.");
 			str_format(aBuf, sizeof(aBuf), "ERROR: configure your firewall/nat to let through udp on port %d.", pContext->m_pParent->m_ServerPort);
-			pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, ProtocolToSystem(Protocol), aBuf);
+			pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, ProtocolToSystem(Protocol), aBuf);
 		}
 		if(RequestIndex > pContext->m_pParent->m_aProtocols[Protocol].m_LastResponseIndex)
 		{
@@ -378,6 +385,8 @@ void CRegister::Init(IEngine *pEngine, IConsole *pConsole, int ServerPort, unsig
 	m_pEngine = pEngine;
 	m_pConsole = pConsole;
 	m_ServerPort = ServerPort;
+	if(g_Config.m_SvExternalPort)
+		m_ServerPort = g_Config.m_SvExternalPort;
 	str_format(m_aConnlessTokenHex, sizeof(m_aConnlessTokenHex), "%08x", SixupSecurityToken);
 
 	m_Secret = random_uuid();
