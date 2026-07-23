@@ -258,11 +258,11 @@ else()
 endif()
 
 ########################################################################
-# COPY DATA
+# COPY MAPS
 ########################################################################
 
-if(EXISTS "${PROJECT_SOURCE_DIR}/data")
-  file(COPY data DESTINATION .)
+if(EXISTS "${PROJECT_SOURCE_DIR}/maps")
+  file(COPY maps DESTINATION .)
 endif()
 
 ########################################################################
@@ -577,9 +577,9 @@ add_custom_target(everything DEPENDS ${TARGETS_OWN})
 ########################################################################
 
 if(NOT DEV)
-  install(DIRECTORY data DESTINATION share/${PROJECT_NAME} COMPONENT data)
+  install(DIRECTORY maps DESTINATION share/${PROJECT_NAME} COMPONENT maps)
   install(TARGETS ${TARGET_SERVER} DESTINATION bin COMPONENT server)
-  install(FILES license.txt readme.txt storage.cfg DESTINATION share/${PROJECT_NAME} COMPONENT data)
+  install(FILES license.txt readme.txt storage.cfg DESTINATION share/${PROJECT_NAME} COMPONENT maps)
 endif()
 
 ########################################################################
