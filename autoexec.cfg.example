@@ -14,3 +14,7 @@ add_vote "map Seabattle0.5" "sv_map Seabattle0.5"
 
 sv_scorelimit 500
 sv_timelimit 30
+
+sv_sixup 1
+# sv_register_community_token YOUR_COMMUNITY_TOKEN
+# sv_flag YOUR_ISO_COUNTRY_CODE

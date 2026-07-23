@@ -4,6 +4,7 @@
 #include <base/math.h>
 #include <engine/shared/config.h>
 #include <game/server/gamecontext.h>
+#include <game/server/sixup_snap.h>
 #include <game/mapitems.h>
 
 #include "character.h"
@@ -2162,7 +2163,8 @@ bool CCharacter::EnterBattlefieldVehicle(CBattle *pVehicle, int Type, int Health
 	m_BattlefieldVehicleLanding = false;
 	m_BattlefieldVehicleExitRequested = false;
 	m_BattlefieldVehicleWaterResetPending = false;
-	m_BattlefieldVehicleScoreboardHeld = false;
+	// require scoreboard release+press to exit (avoids sticky Shift / flag pulse)
+	m_BattlefieldVehicleScoreboardHeld = true;
 	m_BattlefieldUboatOutsideWater = false;
 	m_BattlefieldUboatCollisionLatched = false;
 	m_BattlefieldVehicleEntryCooldown = 0;
@@ -2198,6 +2200,7 @@ bool CCharacter::EnterBattlefieldPassenger(CCharacter *pDriver)
 	m_BattlefieldHeliBombActive = false;
 	m_BattlefieldVehicleBurstShots = 0;
 	m_BattlefieldVehicleEntryCooldown = 0;
+	m_BattlefieldVehicleScoreboardHeld = true;
 	m_Core.m_HookState = HOOK_RETRACTED;
 	m_Core.m_HookedPlayer = -1;
 	m_BattlefieldVehicleGrace = Server()->TickSpeed();
@@ -3813,56 +3816,81 @@ void CCharacter::Snap(int SnappingClient)
 	if(NetworkClipped(SnappingClient))
 		return;
 
-	CNetObj_Character *pCharacter = static_cast<CNetObj_Character *>(Server()->SnapNewItem(NETOBJTYPE_CHARACTER, m_pPlayer->GetCID(), sizeof(CNetObj_Character)));
-	if(!pCharacter)
-		return;
-
-	// write down the m_Core
-	if(!m_ReckoningTick || GameServer()->m_World.m_Paused)
+	int EmoteType = m_EmoteType;
+	if(m_EmoteStop < Server()->Tick())
 	{
-		// no dead reckoning when paused because the client doesn't know
-		// how far to perform the reckoning
-		pCharacter->m_Tick = 0;
-		m_Core.Write(pCharacter);
-	}
-	else
-	{
-		pCharacter->m_Tick = m_ReckoningTick;
-		m_SendCore.Write(pCharacter);
-	}
-
-	// set emote
-	if (m_EmoteStop < Server()->Tick())
-	{
-		m_EmoteType = EMOTE_NORMAL;
+		EmoteType = EMOTE_NORMAL;
 		m_EmoteStop = -1;
 	}
 
-	pCharacter->m_Emote = m_EmoteType;
-
-	pCharacter->m_AmmoCount = 0;
-	pCharacter->m_Health = 0;
-	pCharacter->m_Armor = 0;
-
-	pCharacter->m_Weapon = m_ActiveWeapon;
-	pCharacter->m_AttackTick = m_AttackTick;
-
-	pCharacter->m_Direction = m_Input.m_Direction;
-
+	int Health = 0, Armor = 0, AmmoCount = 0;
 	if(m_pPlayer->GetCID() == SnappingClient || SnappingClient == -1 ||
 		(!g_Config.m_SvStrictSpectateMode && m_pPlayer->GetCID() == GameServer()->m_apPlayers[SnappingClient]->m_SpectatorID))
 	{
-		pCharacter->m_Health = m_Health;
-		pCharacter->m_Armor = m_Armor;
+		Health = m_Health;
+		Armor = m_Armor;
 		if(m_aWeapons[m_ActiveWeapon].m_Ammo > 0)
-			pCharacter->m_AmmoCount = m_aWeapons[m_ActiveWeapon].m_Ammo;
+			AmmoCount = m_aWeapons[m_ActiveWeapon].m_Ammo;
 	}
 
-	if(pCharacter->m_Emote == EMOTE_NORMAL)
+	if(EmoteType == EMOTE_NORMAL)
 	{
 		if(250 - ((Server()->Tick() - m_LastAction)%(250)) < 5)
-			pCharacter->m_Emote = EMOTE_BLINK;
+			EmoteType = EMOTE_BLINK;
 	}
 
-	pCharacter->m_PlayerFlags = GetPlayer()->m_PlayerFlags;
+	if(SnappingClient < 0 || !Server()->IsSixup(SnappingClient))
+	{
+		CNetObj_Character *pCharacter = static_cast<CNetObj_Character *>(Server()->SnapNewItem(NETOBJTYPE_CHARACTER, m_pPlayer->GetCID(), sizeof(CNetObj_Character)));
+		if(!pCharacter)
+			return;
+
+		if(!m_ReckoningTick || GameServer()->m_World.m_Paused)
+		{
+			pCharacter->m_Tick = 0;
+			m_Core.Write(pCharacter);
+		}
+		else
+		{
+			pCharacter->m_Tick = m_ReckoningTick;
+			m_SendCore.Write(pCharacter);
+		}
+
+		pCharacter->m_Emote = EmoteType;
+		pCharacter->m_AmmoCount = AmmoCount;
+		pCharacter->m_Health = Health;
+		pCharacter->m_Armor = Armor;
+		pCharacter->m_Weapon = m_ActiveWeapon;
+		pCharacter->m_AttackTick = m_AttackTick;
+		pCharacter->m_Direction = m_Input.m_Direction;
+		pCharacter->m_PlayerFlags = GetPlayer()->m_PlayerFlags;
+	}
+	else
+	{
+		protocol7::CNetObj_Character *pCharacter = static_cast<protocol7::CNetObj_Character *>(Server()->SnapNewItem(NETOBJTYPE_CHARACTER, m_pPlayer->GetCID(), sizeof(protocol7::CNetObj_Character)));
+		if(!pCharacter)
+			return;
+
+		if(!m_ReckoningTick || GameServer()->m_World.m_Paused)
+		{
+			pCharacter->m_Tick = 0;
+			m_Core.Write((CNetObj_CharacterCore *)pCharacter);
+		}
+		else
+		{
+			pCharacter->m_Tick = m_ReckoningTick;
+			m_SendCore.Write((CNetObj_CharacterCore *)pCharacter);
+		}
+
+		// 0.7 rejects Character if Armor/Health > 10 (vehicle uses Armor for HP)
+		pCharacter->m_Emote = EmoteType;
+		pCharacter->m_AmmoCount = AmmoCount;
+		pCharacter->m_Health = clamp(Health, 0, 10);
+		pCharacter->m_Armor = clamp(Armor, 0, 10);
+		pCharacter->m_Weapon = m_ActiveWeapon;
+		pCharacter->m_AttackTick = m_AttackTick;
+		pCharacter->m_Direction = m_Input.m_Direction;
+		pCharacter->m_TriggeredEvents = TriggeredEvents_SixToSeven(m_Core.m_TriggeredEvents);
+		// keep HookedPlayer=-1; 0 would mean hooked to CID 0 and break prediction
+	}
 }

@@ -1,5 +1,6 @@
 #include <game/generated/protocol.h>
 #include <game/server/gamecontext.h>
+#include <game/server/sixup_snap.h>
 
 #include "ammo.h"
 #include "character.h"
@@ -24,28 +25,35 @@ void CAmmo::Reset()
 
 void CAmmo::Snap(int SnappingClient)
 {
-	(void)SnappingClient;
+	bool Sixup = SnappingClient >= 0 && Server()->IsSixup(SnappingClient);
 	CNetObj_Pickup *pPickup = static_cast<CNetObj_Pickup *>(
-		Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_ID, sizeof(CNetObj_Pickup)));
+		Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_ID, PickupSnapSize(Sixup)));
 	if(!pPickup)
 		return;
 
 	pPickup->m_X = round_to_int(m_CurrentPos.x);
 	pPickup->m_Y = round_to_int(m_CurrentPos.y);
-	pPickup->m_Type = POWERUP_WEAPON;
+	int Subtype = 0;
 	if(m_AnimTimer > Server()->TickSpeed()*2)
-		pPickup->m_Subtype = 4;
+		Subtype = 4;
 	else if(m_AnimTimer > Server()->TickSpeed()*1.5f)
-		pPickup->m_Subtype = 2;
+		Subtype = 2;
 	else if(m_AnimTimer > Server()->TickSpeed())
-		pPickup->m_Subtype = 3;
+		Subtype = 3;
 	else if(m_AnimTimer > Server()->TickSpeed()*0.5f)
-		pPickup->m_Subtype = 1;
+		Subtype = 1;
 	else
 	{
-		pPickup->m_Subtype = 0;
+		Subtype = 0;
 		if(m_AnimTimer == 0)
 			m_AnimTimer = round_to_int(Server()->TickSpeed()*2.5f);
+	}
+	if(Sixup)
+		pPickup->m_Type = PickupTypeSeven(POWERUP_WEAPON, Subtype);
+	else
+	{
+		pPickup->m_Type = POWERUP_WEAPON;
+		pPickup->m_Subtype = Subtype;
 	}
 }
 

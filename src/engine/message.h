@@ -8,7 +8,11 @@
 class CMsgPacker : public CPacker
 {
 public:
-	CMsgPacker(int Type)
+	int m_MsgID;
+	bool m_NoTranslate;
+
+	CMsgPacker(int Type, bool NoTranslate = false) :
+		m_MsgID(Type), m_NoTranslate(NoTranslate)
 	{
 		Reset();
 		AddInt(Type);

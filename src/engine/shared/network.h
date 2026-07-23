@@ -10,7 +10,11 @@
 
 CURRENT:
 	packet header: 3 bytes
-		unsigned char flags_ack; // 4bit flags, 4bit ack
+		unsigned char flags_ack; // 6bit flags, 2bit ack
+			0.6:   ORNCaaAA
+			0.6.5: ORNCTUAA
+			0.7:   --NORCAA
+
 		unsigned char ack; // 8 bit ack
 		unsigned char num_chunks; // 8 bit chunks
 
@@ -59,10 +63,13 @@ enum
 	NET_CONNSTATE_ONLINE=3,
 	NET_CONNSTATE_ERROR=4,
 
-	NET_PACKETFLAG_CONTROL=1,
-	NET_PACKETFLAG_CONNLESS=2,
-	NET_PACKETFLAG_RESEND=4,
-	NET_PACKETFLAG_COMPRESSION=8,
+	// remapped to DDNet / 0.6.5+ layout (wire-compatible via <<2 / >>2)
+	NET_PACKETFLAG_UNUSED = 1 << 0,
+	NET_PACKETFLAG_TOKEN = 1 << 1,
+	NET_PACKETFLAG_CONTROL = 1 << 2,
+	NET_PACKETFLAG_CONNLESS = 1 << 3,
+	NET_PACKETFLAG_RESEND = 1 << 4,
+	NET_PACKETFLAG_COMPRESSION = 1 << 5,
 
 	NET_CHUNKFLAG_VITAL=1,
 	NET_CHUNKFLAG_RESEND=2,
@@ -80,9 +87,22 @@ enum
 	NET_ENUM_TERMINATOR
 };
 
+typedef int SECURITY_TOKEN;
+
+SECURITY_TOKEN ToSecurityToken(unsigned char *pData);
+
+static const unsigned char SECURITY_TOKEN_MAGIC[] = {'T', 'K', 'E', 'N'};
+
+enum
+{
+	NET_SECURITY_TOKEN_UNKNOWN = -1,
+	NET_SECURITY_TOKEN_UNSUPPORTED = 0,
+};
+
 
 typedef int (*NETFUNC_DELCLIENT)(int ClientID, const char* pReason, void *pUser);
-typedef int (*NETFUNC_NEWCLIENT)(int ClientID, void *pUser);
+typedef int (*NETFUNC_NEWCLIENT_CON)(int ClientID, void *pUser);
+typedef int (*NETFUNC_NEWCLIENT)(int ClientID, void *pUser, bool Sixup);
 
 struct CNetChunk
 {
@@ -102,8 +122,8 @@ public:
 	int m_Size;
 	int m_Sequence;
 
-	unsigned char *Pack(unsigned char *pData);
-	unsigned char *Unpack(unsigned char *pData);
+	unsigned char *Pack(unsigned char *pData, int Split = 4);
+	unsigned char *Unpack(unsigned char *pData, int Split = 4);
 };
 
 class CNetChunkResend
@@ -140,7 +160,8 @@ private:
 	unsigned short m_Ack;
 	unsigned m_State;
 
-	int m_Token;
+	SECURITY_TOKEN m_SecurityToken;
+	SECURITY_TOKEN m_Token;
 	int m_RemoteClosed;
 
 	TStaticRingBuffer<CNetChunkResend, NET_CONN_BUFFERSIZE> m_Buffer;
@@ -176,7 +197,7 @@ public:
 	int Update();
 	int Flush();
 
-	int Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr);
+	int Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_TOKEN SecurityToken = NET_SECURITY_TOKEN_UNSUPPORTED);
 	int QueueChunk(int Flags, int DataSize, const void *pData);
 
 	const char *ErrorString();
@@ -191,6 +212,11 @@ public:
 	int64 LastRecvTime() const { return m_LastRecvTime; }
 
 	int AckSequence() const { return m_Ack; }
+	SECURITY_TOKEN SecurityToken() const { return m_SecurityToken; }
+
+	void DirectInit(NETADDR &Addr, SECURITY_TOKEN SecurityToken, SECURITY_TOKEN Token, bool Sixup);
+
+	bool m_Sixup;
 };
 
 class CConsoleNetConnection
@@ -288,9 +314,16 @@ private:
 	NETFUNC_DELCLIENT m_pfnDelClient;
 	void *m_UserPtr;
 
+	unsigned char m_aSecurityTokenSeed[16];
+
 	CNetRecvUnpacker m_RecvUnpacker;
 
 	void BanRemoveByObject(CBan *pBan);
+
+	bool ClientExists(const NETADDR &Addr) { return GetClientSlot(Addr) != -1; }
+	int GetClientSlot(const NETADDR &Addr);
+	int OnSixupCtrlMsg(NETADDR &Addr, CNetChunk *pChunk, int ControlMsg, const CNetPacketConstruct &Packet, SECURITY_TOKEN &ResponseToken, SECURITY_TOKEN Token);
+	int TryAcceptClient(NETADDR &Addr, SECURITY_TOKEN SecurityToken, bool VanillaAuth = false, bool Sixup = false, SECURITY_TOKEN Token = 0);
 
 public:
 	int SetCallbacks(NETFUNC_NEWCLIENT pfnNewClient, NETFUNC_DELCLIENT pfnDelClient, void *pUser);
@@ -321,6 +354,11 @@ public:
 
 	//
 	void SetMaxClientsPerIP(int Max);
+
+	void SendTokenSixup(NETADDR &Addr, SECURITY_TOKEN Token);
+	int SendConnlessSixup(CNetChunk *pChunk, SECURITY_TOKEN ResponseToken);
+	SECURITY_TOKEN GetToken(const NETADDR &Addr);
+	SECURITY_TOKEN GetGlobalToken();
 };
 
 class CNetConsole
@@ -348,14 +386,14 @@ class CNetConsole
 	NETSOCKET m_Socket;
 	CSlot m_aSlots[NET_MAX_CONSOLE_CLIENTS];
 
-	NETFUNC_NEWCLIENT m_pfnNewClient;
+	NETFUNC_NEWCLIENT_CON m_pfnNewClient;
 	NETFUNC_DELCLIENT m_pfnDelClient;
 	void *m_UserPtr;
 
 	CNetRecvUnpacker m_RecvUnpacker;
 
 public:
-	void SetCallbacks(NETFUNC_NEWCLIENT pfnNewClient, NETFUNC_DELCLIENT pfnDelClient, void *pUser);
+	void SetCallbacks(NETFUNC_NEWCLIENT_CON pfnNewClient, NETFUNC_DELCLIENT pfnDelClient, void *pUser);
 
 	//
 	bool Open(NETADDR BindAddr, int Flags);
@@ -426,10 +464,10 @@ public:
 	static int Compress(const void *pData, int DataSize, void *pOutput, int OutputSize);
 	static int Decompress(const void *pData, int DataSize, void *pOutput, int OutputSize);
 
-	static void SendControlMsg(NETSOCKET Socket, NETADDR *pAddr, int Ack, int ControlMsg, const void *pExtra, int ExtraSize);
+	static void SendControlMsg(NETSOCKET Socket, NETADDR *pAddr, int Ack, int ControlMsg, const void *pExtra, int ExtraSize, SECURITY_TOKEN SecurityToken = NET_SECURITY_TOKEN_UNSUPPORTED, bool Sixup = false);
 	static void SendPacketConnless(NETSOCKET Socket, NETADDR *pAddr, const void *pData, int DataSize);
-	static void SendPacket(NETSOCKET Socket, NETADDR *pAddr, CNetPacketConstruct *pPacket);
-	static int UnpackPacket(unsigned char *pBuffer, int Size, CNetPacketConstruct *pPacket);
+	static void SendPacket(NETSOCKET Socket, NETADDR *pAddr, CNetPacketConstruct *pPacket, SECURITY_TOKEN SecurityToken = NET_SECURITY_TOKEN_UNSUPPORTED, bool Sixup = false, bool NoCompress = false);
+	static int UnpackPacket(unsigned char *pBuffer, int Size, CNetPacketConstruct *pPacket, bool &Sixup, SECURITY_TOKEN *pSecurityToken = 0, SECURITY_TOKEN *pResponseToken = 0);
 
 	// The backroom is ack-NET_MAX_SEQUENCE/2. Used for knowing if we acked a packet or not
 	static int IsSeqInBackroom(int Seq, int Ack);

@@ -4,6 +4,7 @@
 #include <game/mapitems.h>
 
 #include <game/generated/protocol.h>
+#include <game/generated/protocol7.h>
 
 #include "entities/pickup.h"
 #include "entities/supply_station.h"
@@ -440,16 +441,17 @@ void IGameController::OnPlayerInfoChange(class CPlayer *pP)
 	if(IsTeamplay())
 	{
 		pP->m_TeeInfos.m_UseCustomColor = 1;
+		int Color = 12895054;
 		if(pP->GetTeam() >= TEAM_RED && pP->GetTeam() <= TEAM_BLUE)
-		{
-			pP->m_TeeInfos.m_ColorBody = aTeamColors[pP->GetTeam()];
-			pP->m_TeeInfos.m_ColorFeet = aTeamColors[pP->GetTeam()];
-		}
-		else
-		{
-			pP->m_TeeInfos.m_ColorBody = 12895054;
-			pP->m_TeeInfos.m_ColorFeet = 12895054;
-		}
+			Color = aTeamColors[pP->GetTeam()];
+		pP->m_TeeInfos.m_ColorBody = Color;
+		pP->m_TeeInfos.m_ColorFeet = Color;
+		// 0.7 skin parts: body=0, feet=4
+		pP->m_TeeInfos.m_aUseCustomColors[0] = 1;
+		pP->m_TeeInfos.m_aUseCustomColors[4] = 1;
+		pP->m_TeeInfos.m_aSkinPartColors[0] = Color;
+		pP->m_TeeInfos.m_aSkinPartColors[4] = Color;
+		GameServer()->SendSixupSkinChange(pP->GetCID());
 	}
 }
 
@@ -652,6 +654,30 @@ bool IGameController::IsTeamplay() const
 
 void IGameController::Snap(int SnappingClient)
 {
+	if(SnappingClient >= 0 && Server()->IsSixup(SnappingClient))
+	{
+		protocol7::CNetObj_GameData *pGameData = (protocol7::CNetObj_GameData *)Server()->SnapNewItem(
+			-protocol7::NETOBJTYPE_GAMEDATA, 0, sizeof(protocol7::CNetObj_GameData));
+		if(!pGameData)
+			return;
+
+		pGameData->m_GameStartTick = m_RoundStartTick;
+		pGameData->m_GameStateFlags = 0;
+		pGameData->m_GameStateEndTick = 0;
+		if(m_Warmup)
+		{
+			pGameData->m_GameStateFlags |= protocol7::GAMESTATEFLAG_WARMUP;
+			pGameData->m_GameStateEndTick = Server()->Tick() + m_Warmup;
+		}
+		if(m_GameOverTick != -1)
+			pGameData->m_GameStateFlags |= protocol7::GAMESTATEFLAG_GAMEOVER;
+		if(m_SuddenDeath)
+			pGameData->m_GameStateFlags |= protocol7::GAMESTATEFLAG_SUDDENDEATH;
+		if(GameServer()->m_World.m_Paused)
+			pGameData->m_GameStateFlags |= protocol7::GAMESTATEFLAG_PAUSED;
+		return;
+	}
+
 	CNetObj_GameInfo *pGameInfoObj = (CNetObj_GameInfo *)Server()->SnapNewItem(NETOBJTYPE_GAMEINFO, 0, sizeof(CNetObj_GameInfo));
 	if(!pGameInfoObj)
 		return;

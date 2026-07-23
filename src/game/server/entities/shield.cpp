@@ -1,6 +1,7 @@
 #include <game/generated/protocol.h>
 #include <game/server/gamecontext.h>
 #include <game/server/player.h>
+#include <game/server/sixup_snap.h>
 
 #include <math.h>
 
@@ -64,13 +65,14 @@ void CShield::Tick()
 
 void CShield::Snap(int SnappingClient)
 {
-	(void)SnappingClient;
+	bool Sixup = SnappingClient >= 0 && Server()->IsSixup(SnappingClient);
 	CNetObj_Pickup *pPickup = static_cast<CNetObj_Pickup *>(
-		Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_ID, sizeof(CNetObj_Pickup)));
+		Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_ID, PickupSnapSize(Sixup)));
 	if(!pPickup)
 		return;
 	pPickup->m_X = round_to_int(m_Pos.x);
 	pPickup->m_Y = round_to_int(m_Pos.y);
-	pPickup->m_Type = 0;
-	pPickup->m_Subtype = 0;
+	pPickup->m_Type = POWERUP_HEALTH;
+	if(!Sixup)
+		pPickup->m_Subtype = 0;
 }

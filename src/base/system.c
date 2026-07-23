@@ -578,6 +578,14 @@ int net_addr_comp(const NETADDR *a, const NETADDR *b)
 	return mem_comp(a, b, sizeof(NETADDR));
 }
 
+int net_addr_comp_noport(const NETADDR *a, const NETADDR *b)
+{
+	NETADDR sa = *a, sb = *b;
+	sa.port = 0;
+	sb.port = 0;
+	return net_addr_comp(&sa, &sb);
+}
+
 void net_addr_str(const NETADDR *addr, char *string, int max_length)
 {
 	if(addr->type == NETTYPE_IPV4)
@@ -1692,6 +1700,50 @@ void str_hex(char *dst, int dst_size, const void *data, int data_size)
 	}
 }
 
+static int hexval(char c)
+{
+	switch(c)
+	{
+	case '0': return 0;
+	case '1': return 1;
+	case '2': return 2;
+	case '3': return 3;
+	case '4': return 4;
+	case '5': return 5;
+	case '6': return 6;
+	case '7': return 7;
+	case '8': return 8;
+	case '9': return 9;
+	case 'a': case 'A': return 10;
+	case 'b': case 'B': return 11;
+	case 'c': case 'C': return 12;
+	case 'd': case 'D': return 13;
+	case 'e': case 'E': return 14;
+	case 'f': case 'F': return 15;
+	default: return -1;
+	}
+}
+
+int str_hex_decode(void *dst, int dst_size, const char *src)
+{
+	unsigned char *cdst = (unsigned char *)dst;
+	int slen = str_length(src);
+	int len = slen / 2;
+	int i;
+	if(slen != dst_size * 2)
+		return 2;
+
+	for(i = 0; i < len && dst_size; i++, dst_size--)
+	{
+		int v1 = hexval(src[i * 2]);
+		int v2 = hexval(src[i * 2 + 1]);
+		if(v1 < 0 || v2 < 0)
+			return 1;
+		*cdst++ = (unsigned char)(v1 * 16 + v2);
+	}
+	return 0;
+}
+
 void str_timestamp(char *buffer, int buffer_size)
 {
 	time_t time_data;
@@ -1931,6 +1983,62 @@ unsigned str_quickhash(const char *str)
 	for(; *str; str++)
 		hash = ((hash << 5) + hash) + (*str); /* hash * 33 + c */
 	return hash;
+}
+
+struct SECURE_RANDOM_DATA
+{
+	int initialized;
+#if defined(CONF_FAMILY_WINDOWS)
+	HCRYPTPROV provider;
+#else
+	IOHANDLE urandom;
+#endif
+};
+
+static struct SECURE_RANDOM_DATA secure_random_data = {0};
+
+int secure_random_init()
+{
+	if(secure_random_data.initialized)
+		return 0;
+#if defined(CONF_FAMILY_WINDOWS)
+	if(CryptAcquireContext(&secure_random_data.provider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT))
+	{
+		secure_random_data.initialized = 1;
+		return 0;
+	}
+	return 1;
+#else
+	secure_random_data.urandom = io_open("/dev/urandom", IOFLAG_READ);
+	if(secure_random_data.urandom)
+	{
+		secure_random_data.initialized = 1;
+		return 0;
+	}
+	return 1;
+#endif
+}
+
+void secure_random_fill(void *bytes, unsigned length)
+{
+	if(!secure_random_data.initialized)
+	{
+		dbg_msg("secure", "called secure_random_fill before secure_random_init");
+		dbg_break();
+	}
+#if defined(CONF_FAMILY_WINDOWS)
+	if(!CryptGenRandom(secure_random_data.provider, length, (BYTE *)bytes))
+	{
+		dbg_msg("secure", "CryptGenRandom failed");
+		dbg_break();
+	}
+#else
+	if(length != io_read(secure_random_data.urandom, bytes, length))
+	{
+		dbg_msg("secure", "io_read returned with a short read");
+		dbg_break();
+	}
+#endif
 }
 
 

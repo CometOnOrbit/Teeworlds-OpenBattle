@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "snapshot.h"
 #include "compression.h"
+#include <game/generated/protocolglue.h>
 
 // CSnapshot
 
@@ -486,10 +487,11 @@ int CSnapshotStorage::Get(int Tick, int64 *pTagtime, CSnapshot **ppData, CSnapsh
 
 // CSnapshotBuilder
 
-void CSnapshotBuilder::Init()
+void CSnapshotBuilder::Init(bool Sixup)
 {
 	m_DataSize = 0;
 	m_NumItems = 0;
+	m_Sixup = Sixup;
 }
 
 CSnapshotItem *CSnapshotBuilder::GetItem(int Index)
@@ -528,6 +530,17 @@ void *CSnapshotBuilder::NewItem(int Type, int ID, int Size)
 		dbg_assert(m_DataSize < CSnapshot::MAX_SIZE, "too much data");
 		dbg_assert(m_NumItems < MAX_ITEMS, "too many items");
 		return 0;
+	}
+
+	if(m_Sixup)
+	{
+		// positive = 0.6 type (remap); negative = absolute 0.7 type
+		if(Type >= 0)
+			Type = Obj_SixToSeven(Type);
+		else
+			Type = -Type;
+		if(Type < 0)
+			return 0; // no 0.7 mapping — skip item
 	}
 
 	CSnapshotItem *pObj = (CSnapshotItem *)(m_aData + m_DataSize);

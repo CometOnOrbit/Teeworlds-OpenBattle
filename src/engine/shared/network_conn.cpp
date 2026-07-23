@@ -4,6 +4,11 @@
 #include "config.h"
 #include "network.h"
 
+SECURITY_TOKEN ToSecurityToken(unsigned char *pData)
+{
+	return (int)pData[0] | (pData[1] << 8) | (pData[2] << 16) | (pData[3] << 24);
+}
+
 void CNetConnection::ResetStats()
 {
 	mem_zero(&m_Stats, sizeof(m_Stats));
@@ -20,6 +25,8 @@ void CNetConnection::Reset()
 	m_LastRecvTime = 0;
 	m_LastUpdateTime = 0;
 	m_Token = -1;
+	m_SecurityToken = NET_SECURITY_TOKEN_UNSUPPORTED;
+	m_Sixup = false;
 	mem_zero(&m_PeerAddr, sizeof(m_PeerAddr));
 
 	m_Buffer.Init();
@@ -74,7 +81,7 @@ int CNetConnection::Flush()
 
 	// send of the packets
 	m_Construct.m_Ack = m_Ack;
-	CNetBase::SendPacket(m_Socket, &m_PeerAddr, &m_Construct);
+	CNetBase::SendPacket(m_Socket, &m_PeerAddr, &m_Construct, m_SecurityToken, m_Sixup);
 
 	// update send times
 	m_LastSendTime = time_get();
@@ -89,7 +96,7 @@ int CNetConnection::QueueChunkEx(int Flags, int DataSize, const void *pData, int
 	unsigned char *pChunkData;
 
 	// check if we have space for it, if not, flush the connection
-	if(m_Construct.m_DataSize + DataSize + NET_MAX_CHUNKHEADERSIZE > (int)sizeof(m_Construct.m_aChunkData))
+	if(m_Construct.m_DataSize + DataSize + NET_MAX_CHUNKHEADERSIZE > (int)sizeof(m_Construct.m_aChunkData) - (int)sizeof(SECURITY_TOKEN))
 		Flush();
 
 	// pack all the data
@@ -98,7 +105,7 @@ int CNetConnection::QueueChunkEx(int Flags, int DataSize, const void *pData, int
 	Header.m_Size = DataSize;
 	Header.m_Sequence = Sequence;
 	pChunkData = &m_Construct.m_aChunkData[m_Construct.m_DataSize];
-	pChunkData = Header.Pack(pChunkData);
+	pChunkData = Header.Pack(pChunkData, m_Sixup ? 6 : 4);
 	mem_copy(pChunkData, pData, DataSize);
 	pChunkData += DataSize;
 
@@ -144,7 +151,7 @@ void CNetConnection::SendControl(int ControlMsg, const void *pExtra, int ExtraSi
 {
 	// send the control message
 	m_LastSendTime = time_get();
-	CNetBase::SendControlMsg(m_Socket, &m_PeerAddr, m_Ack, ControlMsg, pExtra, ExtraSize);
+	CNetBase::SendControlMsg(m_Socket, &m_PeerAddr, m_Ack, ControlMsg, pExtra, ExtraSize, m_SecurityToken, m_Sixup);
 }
 
 void CNetConnection::ResendChunk(CNetChunkResend *pResend)
@@ -193,8 +200,31 @@ void CNetConnection::Disconnect(const char *pReason)
 	Reset();
 }
 
-int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr)
+void CNetConnection::DirectInit(NETADDR &Addr, SECURITY_TOKEN SecurityToken, SECURITY_TOKEN Token, bool Sixup)
 {
+	Reset();
+
+	m_State = NET_CONNSTATE_ONLINE;
+
+	m_PeerAddr = Addr;
+	mem_zero(m_ErrorString, sizeof(m_ErrorString));
+
+	int64 Now = time_get();
+	m_LastSendTime = Now;
+	m_LastRecvTime = Now;
+	m_LastUpdateTime = Now;
+
+	m_SecurityToken = SecurityToken;
+	m_Token = Token;
+	m_Sixup = Sixup;
+}
+
+int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_TOKEN SecurityToken)
+{
+	// sixup: token lives in packet header
+	if(m_Sixup && SecurityToken != m_Token)
+		return 0;
+
 	int64 Now = time_get();
 
 	// check if resend is requested

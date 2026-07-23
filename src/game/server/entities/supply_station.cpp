@@ -1,6 +1,7 @@
 #include <game/generated/protocol.h>
 #include <game/generated/server_data.h>
 #include <game/server/gamecontext.h>
+#include <game/server/sixup_snap.h>
 
 #include "supply_station.h"
 #include "character.h"
@@ -29,14 +30,20 @@ void CSupplyStation::Reset()
 
 void CSupplyStation::SnapPickup(int Type, int Subtype)
 {
+	bool Sixup = m_SnapClient >= 0 && Server()->IsSixup(m_SnapClient);
 	CNetObj_Pickup *pPickup = static_cast<CNetObj_Pickup *>(
-		Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_aExtraIDs[3], sizeof(CNetObj_Pickup)));
+		Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_aExtraIDs[3], PickupSnapSize(Sixup)));
 	if(!pPickup)
 		return;
 	pPickup->m_X = round_to_int(m_CurrentPos.x);
 	pPickup->m_Y = round_to_int(m_CurrentPos.y);
-	pPickup->m_Type = Type;
-	pPickup->m_Subtype = Subtype;
+	if(Sixup)
+		pPickup->m_Type = PickupTypeSeven(Type, Subtype);
+	else
+	{
+		pPickup->m_Type = Type;
+		pPickup->m_Subtype = Subtype;
+	}
 }
 
 void CSupplyStation::SnapLaser(int ID, vec2 From, vec2 To)
@@ -54,7 +61,7 @@ void CSupplyStation::SnapLaser(int ID, vec2 From, vec2 To)
 
 void CSupplyStation::Snap(int SnappingClient)
 {
-	(void)SnappingClient;
+	m_SnapClient = SnappingClient;
 	if(m_Type == 1 && m_AmmoCooldown == 0)
 	{
 		int Subtype = 0;

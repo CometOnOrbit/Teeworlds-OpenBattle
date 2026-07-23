@@ -211,6 +211,8 @@ find_package(ZLIB)
 find_package(Git)
 find_package(PythonInterp)
 find_package(Threads)
+find_package(CURL)
+find_package(OpenSSL)
 if(TOOLS)
   find_package(Pnglite)
 endif()
@@ -235,12 +237,20 @@ endfunction()
 
 show_dependency_status("PythonInterp" PYTHONINTERP)
 show_dependency_status("Zlib" ZLIB)
+show_dependency_status("Curl" CURL)
+show_dependency_status("OpenSSL" OPENSSL)
 if(TOOLS)
   show_dependency_status("Pnglite" PNGLITE)
 endif()
 
 if(NOT PYTHONINTERP_FOUND)
   message(SEND_ERROR "You must install Python to compile OpenBattle")
+endif()
+if(NOT CURL_FOUND)
+  message(SEND_ERROR "You must install libcurl to compile OpenBattle (DDNet HTTP register)")
+endif()
+if(NOT OPENSSL_FOUND)
+  message(SEND_ERROR "You must install OpenSSL to compile OpenBattle (SHA256 / HTTPS)")
 endif()
 
 if(TARGET_OS STREQUAL "windows")
@@ -291,6 +301,37 @@ function(generate_source output_file script_parameter)
   )
 endfunction()
 
+function(generate_source7 output_file script_parameter)
+  add_custom_command(OUTPUT ${output_file}
+    COMMAND ${PYTHON_EXECUTABLE} -m datasrc.seven.compile ${script_parameter}
+      > "${PROJECT_BINARY_DIR}/${output_file}"
+    DEPENDS
+      datasrc/seven/compile.py
+      datasrc/seven/content.py
+      datasrc/seven/datatypes.py
+      datasrc/seven/network.py
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  )
+endfunction()
+
+function(generate_maps output_file)
+  add_custom_command(OUTPUT ${output_file}
+    COMMAND ${PYTHON_EXECUTABLE} datasrc/crosscompile.py
+      > "${PROJECT_BINARY_DIR}/${output_file}"
+    DEPENDS
+      datasrc/compile.py
+      datasrc/content.py
+      datasrc/datatypes.py
+      datasrc/network.py
+      datasrc/crosscompile.py
+      datasrc/seven/compile.py
+      datasrc/seven/content.py
+      datasrc/seven/datatypes.py
+      datasrc/seven/network.py
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  )
+endfunction()
+
 file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src/game/generated/")
 
 chash("src/game/generated/nethash.cpp"
@@ -303,6 +344,9 @@ generate_source("src/game/generated/protocol.cpp" "network_source")
 generate_source("src/game/generated/protocol.h" "network_header")
 generate_source("src/game/generated/server_data.cpp" "server_content_source")
 generate_source("src/game/generated/server_data.h" "server_content_header")
+generate_source7("src/game/generated/protocol7.cpp" "network_source")
+generate_source7("src/game/generated/protocol7.h" "network_header")
+generate_maps("src/game/generated/protocolglue.h")
 
 ########################################################################
 # SHARED
@@ -310,6 +354,10 @@ generate_source("src/game/generated/server_data.h" "server_content_header")
 
 set_glob(BASE GLOB_RECURSE src/base
   detect.h
+  hash.c
+  hash.h
+  hash_ctxt.h
+  hash_openssl.c
   math.h
   system.c
   system.h
@@ -319,7 +367,10 @@ set_glob(BASE GLOB_RECURSE src/base
   tl/base.h
   tl/range.h
   tl/sorted_array.h
+  tl/stream.h
   tl/string.h
+  uuid.c
+  uuid.h
   vmath.h
 )
 set_glob(ENGINE_INTERFACE GLOB src/engine
@@ -354,8 +405,14 @@ set_glob(ENGINE_SHARED GLOB src/engine/shared
   filecollection.h
   huffman.cpp
   huffman.h
+  http_request.cpp
+  http_request.h
   jobs.cpp
   jobs.h
+  jsonparser.cpp
+  jsonparser.h
+  jsonwriter.cpp
+  jsonwriter.h
   kernel.cpp
   linereader.cpp
   linereader.h
@@ -385,6 +442,9 @@ set_glob(ENGINE_SHARED GLOB src/engine/shared
 set(ENGINE_GENERATED_SHARED
   ${PROJECT_BINARY_DIR}/src/game/generated/protocol.cpp
   ${PROJECT_BINARY_DIR}/src/game/generated/protocol.h
+  ${PROJECT_BINARY_DIR}/src/game/generated/protocol7.cpp
+  ${PROJECT_BINARY_DIR}/src/game/generated/protocol7.h
+  ${PROJECT_BINARY_DIR}/src/game/generated/protocolglue.h
 )
 set_glob(GAME_SHARED GLOB src/game
   collision.cpp
@@ -405,7 +465,7 @@ set(GAME_GENERATED_SHARED
 )
 
 set(DEPS ${ZLIB_DEP})
-set(LIBS ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES} ${PLATFORM_LIBS})
+set(LIBS ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES} OpenSSL::Crypto CURL::libcurl ${PLATFORM_LIBS})
 
 set_glob(DEP_JSON_SRC GLOB src/engine/external/json-parser
   json.c
@@ -647,7 +707,14 @@ foreach(target ${TARGETS_OWN})
   target_include_directories(${target} PRIVATE ${PROJECT_BINARY_DIR}/src)
   target_include_directories(${target} PRIVATE src)
   target_compile_definitions(${target} PRIVATE $<$<CONFIG:Debug>:CONF_DEBUG>)
+  target_compile_definitions(${target} PRIVATE CONF_OPENSSL)
   target_include_directories(${target} PRIVATE ${ZLIB_INCLUDE_DIRS})
+  if(CURL_INCLUDE_DIRS)
+    target_include_directories(${target} PRIVATE ${CURL_INCLUDE_DIRS})
+  endif()
+  if(OPENSSL_INCLUDE_DIR)
+    target_include_directories(${target} PRIVATE ${OPENSSL_INCLUDE_DIR})
+  endif()
   # Teeworlds is C++ without exceptions / RTTI expectations closer to -fno-exceptions
   if(NOT MSVC)
     target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>)

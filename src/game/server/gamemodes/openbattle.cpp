@@ -3,6 +3,7 @@
 #include <engine/shared/config.h>
 
 #include <game/mapitems.h>
+#include <game/generated/protocol7.h>
 
 #include <game/server/entities/character.h>
 #include <game/server/entities/flag.h>
@@ -110,6 +111,49 @@ bool CGameControllerOpenBattle::CanBeMovedOnBalance(int ClientID)
 void CGameControllerOpenBattle::Snap(int SnappingClient)
 {
 	IGameController::Snap(SnappingClient);
+
+	if(SnappingClient >= 0 && Server()->IsSixup(SnappingClient))
+	{
+		protocol7::CNetObj_GameDataTeam *pTeam = (protocol7::CNetObj_GameDataTeam *)Server()->SnapNewItem(
+			-protocol7::NETOBJTYPE_GAMEDATATEAM, 0, sizeof(protocol7::CNetObj_GameDataTeam));
+		if(pTeam)
+		{
+			pTeam->m_TeamscoreRed = m_aTeamscore[TEAM_RED];
+			pTeam->m_TeamscoreBlue = m_aTeamscore[TEAM_BLUE];
+		}
+
+		protocol7::CNetObj_GameDataFlag *pFlag = (protocol7::CNetObj_GameDataFlag *)Server()->SnapNewItem(
+			-protocol7::NETOBJTYPE_GAMEDATAFLAG, 0, sizeof(protocol7::CNetObj_GameDataFlag));
+		if(!pFlag)
+			return;
+
+		pFlag->m_FlagDropTickRed = 0;
+		pFlag->m_FlagDropTickBlue = 0;
+		if(m_apFlags[TEAM_RED])
+		{
+			if(m_apFlags[TEAM_RED]->m_AtStand)
+				pFlag->m_FlagCarrierRed = protocol7::FLAG_ATSTAND;
+			else if(m_apFlags[TEAM_RED]->m_pCarryingCharacter && m_apFlags[TEAM_RED]->m_pCarryingCharacter->GetPlayer())
+				pFlag->m_FlagCarrierRed = m_apFlags[TEAM_RED]->m_pCarryingCharacter->GetPlayer()->GetCID();
+			else
+				pFlag->m_FlagCarrierRed = protocol7::FLAG_TAKEN;
+		}
+		else
+			pFlag->m_FlagCarrierRed = protocol7::FLAG_MISSING;
+
+		if(m_apFlags[TEAM_BLUE])
+		{
+			if(m_apFlags[TEAM_BLUE]->m_AtStand)
+				pFlag->m_FlagCarrierBlue = protocol7::FLAG_ATSTAND;
+			else if(m_apFlags[TEAM_BLUE]->m_pCarryingCharacter && m_apFlags[TEAM_BLUE]->m_pCarryingCharacter->GetPlayer())
+				pFlag->m_FlagCarrierBlue = m_apFlags[TEAM_BLUE]->m_pCarryingCharacter->GetPlayer()->GetCID();
+			else
+				pFlag->m_FlagCarrierBlue = protocol7::FLAG_TAKEN;
+		}
+		else
+			pFlag->m_FlagCarrierBlue = protocol7::FLAG_MISSING;
+		return;
+	}
 
 	CNetObj_GameData *pGameDataObj = (CNetObj_GameData *)Server()->SnapNewItem(NETOBJTYPE_GAMEDATA, 0, sizeof(CNetObj_GameData));
 	if(!pGameDataObj)

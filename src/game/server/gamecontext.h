@@ -9,6 +9,8 @@
 
 #include <game/layers.h>
 #include <game/voting.h>
+#include <game/generated/protocol.h>
+#include <game/generated/protocol7.h>
 
 #include "eventhandler.h"
 #include "gamecontroller.h"
@@ -49,7 +51,10 @@ class CGameContext : public IGameServer
 	CLayers m_Layers;
 	CCollision m_Collision;
 	CNetObjHandler m_NetObjHandler;
+	protocol7::CNetObjHandler m_NetObjHandler7;
 	CTuningParams m_Tuning;
+
+	void *PreProcessMsg(int *pMsgID, CUnpacker *pUnpacker, int ClientID);
 
 	static void ConTuneParam(IConsole::IResult *pResult, void *pUserData);
 	static void ConTuneReset(IConsole::IResult *pResult, void *pUserData);
@@ -80,6 +85,12 @@ public:
 	const char *Localize(const char *pText, int ClientID);
 	bool HandleChatCommand(int ClientID, const char *pMessage);
 	void SendWelcomeTutorial(int ClientID);
+	void SendSixupClientInfos(int ClientID);
+	void SendSixupGameInfo(int ClientID);
+	void SendSixupServerSettings(int ClientID);
+	void SendSixupSkinChange(int ClientID);
+	void SendSixupClientDrop(int ClientID, const char *pReason, bool Silent);
+	void SendSixupTeam(int ClientID, bool Silent);
 	void TrySendTip(int ClientID, int TipFlag, const char *pText);
 
 	CGameContext();
@@ -129,6 +140,7 @@ public:
 	char m_aVoteReason[VOTE_REASON_LENGTH];
 	int m_NumVoteOptions;
 	int m_VoteEnforce;
+	bool m_SixupCallVoteForce;
 	enum
 	{
 		VOTE_ENFORCE_UNKNOWN=0,

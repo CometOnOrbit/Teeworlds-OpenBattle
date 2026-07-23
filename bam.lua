@@ -65,13 +65,49 @@ function ContentCompile(action, output)
 	return output
 end
 
+function ContentCompile7(action, output)
+	output = Path(output)
+	AddJob(
+		output,
+		"seven " .. action .. " > " .. output,
+		"PYTHONPATH=. " .. Script("-m datasrc.seven.compile") .. " " .. action .. " > " .. Path(output)
+	)
+	AddDependency(output, Path("datasrc/seven/compile.py"))
+	AddDependency(output, Path("datasrc/seven/content.py"))
+	AddDependency(output, Path("datasrc/seven/network.py"))
+	AddDependency(output, Path("datasrc/seven/datatypes.py"))
+	return output
+end
+
+function ContentCompileGlue(output)
+	output = Path(output)
+	AddJob(
+		output,
+		"crosscompile > " .. output,
+		"PYTHONPATH=. " .. Script("datasrc/crosscompile.py") .. " > " .. Path(output)
+	)
+	AddDependency(output, Path("datasrc/crosscompile.py"))
+	AddDependency(output, Path("datasrc/network.py"))
+	AddDependency(output, Path("datasrc/seven/network.py"))
+	AddDependency(output, Path("datasrc/compile.py"))
+	AddDependency(output, Path("datasrc/seven/compile.py"))
+	return output
+end
+
 -- Content Compile
 network_source = ContentCompile("network_source", "src/game/generated/protocol.cpp")
 network_header = ContentCompile("network_header", "src/game/generated/protocol.h")
+network7_source = ContentCompile7("network_source", "src/game/generated/protocol7.cpp")
+network7_header = ContentCompile7("network_header", "src/game/generated/protocol7.h")
+protocolglue = ContentCompileGlue("src/game/generated/protocolglue.h")
 server_content_source = ContentCompile("server_content_source", "src/game/generated/server_data.cpp")
 server_content_header = ContentCompile("server_content_header", "src/game/generated/server_data.h")
 
 AddDependency(network_source, network_header)
+AddDependency(network7_source, network7_header)
+AddDependency(network7_source, protocolglue)
+AddDependency(protocolglue, network_header)
+AddDependency(protocolglue, network7_header)
 AddDependency(server_content_source, server_content_header)
 
 nethash = CHash("src/game/generated/nethash.cpp", "src/engine/shared/protocol.h", "src/game/generated/protocol.h", "src/game/tuning.h", "src/game/gamecore.cpp", network_header)
@@ -88,6 +124,23 @@ end
 
 function Intermediate_Output(settings, input)
 	return "objs/" .. string.sub(PathBase(input), string.len("src/")+1) .. settings.config_ext
+end
+
+function FilterPaths(paths, deny)
+	local out = {}
+	for _, p in ipairs(paths) do
+		local skip = false
+		for _, d in ipairs(deny) do
+			if string.find(p, d, 1, true) then
+				skip = true
+				break
+			end
+		end
+		if not skip then
+			table.insert(out, p)
+		end
+	end
+	return out
 end
 
 function build(settings)
@@ -116,6 +169,7 @@ function build(settings)
 	end
 
 	settings.cc.includes:Add("src")
+	settings.cc.defines:Add("CONF_OPENSSL")
 
 	if family == "unix" then
 		if platform == "macosx" then
@@ -124,6 +178,8 @@ function build(settings)
 		else
 			settings.link.libs:Add("pthread")
 		end
+		settings.link.libs:Add("curl")
+		settings.link.libs:Add("crypto")
 
 		if platform == "solaris" then
 			settings.link.flags:Add("-lsocket")
@@ -135,6 +191,8 @@ function build(settings)
 		settings.link.libs:Add("ws2_32")
 		settings.link.libs:Add("ole32")
 		settings.link.libs:Add("shell32")
+		settings.link.libs:Add("libcurl")
+		settings.link.libs:Add("libcrypto")
 	end
 
 	-- compile zlib if needed
@@ -160,7 +218,16 @@ function build(settings)
 		launcher_settings.link.frameworks:Add("Cocoa")
 	end
 
-	engine = Compile(engine_settings, Collect("src/engine/shared/*.cpp", "src/base/*.c"))
+	-- shared: skip leftover DDNet netban; base: OpenSSL hash only
+	shared_src = FilterPaths(Collect("src/engine/shared/*.cpp"), {"netban.cpp"})
+	base_src = {
+		"src/base/system.c",
+		"src/base/hash.c",
+		"src/base/hash_openssl.c",
+		"src/base/uuid.c",
+	}
+
+	engine = Compile(engine_settings, shared_src, base_src, network7_source)
 	server = Compile(server_settings, Collect("src/engine/server/*.cpp"))
 
 	versionserver = Compile(settings, Collect("src/versionsrv/*.cpp"))

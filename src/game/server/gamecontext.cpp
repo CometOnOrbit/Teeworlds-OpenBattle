@@ -11,6 +11,7 @@
 #include <game/version.h>
 #include <game/collision.h>
 #include <game/gamecore.h>
+#include <game/generated/protocolglue.h>
 #include "gamemodes/openbattle.h"
 #include "entities/supply_station.h"
 
@@ -52,6 +53,7 @@ void CGameContext::Construct(int Resetting)
 	m_pVoteOptionFirst = 0;
 	m_pVoteOptionLast = 0;
 	m_NumVoteOptions = 0;
+	m_SixupCallVoteForce = false;
 
 	if(Resetting==NO_RESET)
 		m_pVoteOptionHeap = new CHeap();
@@ -299,8 +301,26 @@ void CGameContext::CreateSound(vec2 Pos, int Sound, int Mask)
 
 void CGameContext::CreateSoundGlobal(int Sound, int Target)
 {
-	if (Sound < 0)
+	if(Sound < 0)
 		return;
+
+	if(Target == -1)
+	{
+		for(int i = 0; i < MAX_CLIENTS; i++)
+		{
+			if(m_apPlayers[i] && Server()->ClientIngame(i))
+				CreateSoundGlobal(Sound, i);
+		}
+		return;
+	}
+
+	if(Server()->IsSixup(Target))
+	{
+		// 0.7 has no Sv_SoundGlobal — play at viewer position
+		if(m_apPlayers[Target])
+			CreateSound(m_apPlayers[Target]->m_ViewPos, Sound, CmaskOne(Target));
+		return;
+	}
 
 	CNetMsg_Sv_SoundGlobal Msg;
 	Msg.m_SoundID = Sound;
@@ -458,20 +478,50 @@ void CGameContext::EndVote()
 
 void CGameContext::SendVoteSet(int ClientID)
 {
-	CNetMsg_Sv_VoteSet Msg;
+	CNetMsg_Sv_VoteSet Msg6;
+	protocol7::CNetMsg_Sv_VoteSet Msg7;
+	Msg7.m_ClientID = m_VoteCreator;
+
 	if(m_VoteCloseTime)
 	{
-		Msg.m_Timeout = (m_VoteCloseTime-time_get())/time_freq();
-		Msg.m_pDescription = m_aVoteDescription;
-		Msg.m_pReason = m_aVoteReason;
+		Msg6.m_Timeout = Msg7.m_Timeout = (m_VoteCloseTime-time_get())/time_freq();
+		Msg6.m_pDescription = Msg7.m_pDescription = m_aVoteDescription;
+		Msg6.m_pReason = Msg7.m_pReason = m_aVoteReason;
+		Msg7.m_Type = protocol7::VOTE_START_OP;
+		if(!str_comp_num(m_aVoteCommand, "kick ", 5))
+			Msg7.m_Type = protocol7::VOTE_START_KICK;
+		else if(!str_comp_num(m_aVoteCommand, "set_team ", 9))
+			Msg7.m_Type = protocol7::VOTE_START_SPEC;
 	}
 	else
 	{
-		Msg.m_Timeout = 0;
-		Msg.m_pDescription = "";
-		Msg.m_pReason = "";
+		Msg6.m_Timeout = Msg7.m_Timeout = 0;
+		Msg6.m_pDescription = Msg7.m_pDescription = "";
+		Msg6.m_pReason = Msg7.m_pReason = "";
+		if(m_VoteEnforce == VOTE_ENFORCE_YES)
+			Msg7.m_Type = protocol7::VOTE_END_PASS;
+		else if(m_VoteEnforce == VOTE_ENFORCE_NO)
+			Msg7.m_Type = protocol7::VOTE_END_FAIL;
+		else
+			Msg7.m_Type = protocol7::VOTE_END_ABORT;
 	}
-	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
+
+	if(ClientID == -1)
+	{
+		for(int i = 0; i < MAX_CLIENTS; i++)
+		{
+			if(!m_apPlayers[i])
+				continue;
+			if(Server()->IsSixup(i))
+				Server()->SendPackMsg(&Msg7, MSGFLAG_VITAL, i);
+			else
+				Server()->SendPackMsg(&Msg6, MSGFLAG_VITAL, i);
+		}
+	}
+	else if(Server()->IsSixup(ClientID))
+		Server()->SendPackMsg(&Msg7, MSGFLAG_VITAL, ClientID);
+	else
+		Server()->SendPackMsg(&Msg6, MSGFLAG_VITAL, ClientID);
 }
 
 void CGameContext::SendVoteStatus(int ClientID, int Total, int Yes, int No)
@@ -517,10 +567,26 @@ void CGameContext::SendTuningParams(int ClientID)
 {
 	CheckPureTuning();
 
+	if(ClientID == -1)
+	{
+		for(int i = 0; i < MAX_CLIENTS; i++)
+		{
+			if(m_apPlayers[i] && Server()->ClientIngame(i))
+				SendTuningParams(i);
+		}
+		return;
+	}
+
 	CMsgPacker Msg(NETMSGTYPE_SV_TUNEPARAMS);
 	int *pParams = (int *)&m_Tuning;
-	for(unsigned i = 0; i < sizeof(m_Tuning)/sizeof(int); i++)
+	unsigned Num = sizeof(m_Tuning)/sizeof(int);
+	for(unsigned i = 0; i < Num; i++)
+	{
+		// laser_damage removed in 0.7 — skipping keeps collision/hooking aligned
+		if(Server()->IsSixup(ClientID) && i == 30)
+			continue;
 		Msg.AddInt(pParams[i]);
+	}
 	Server()->SendMsg(&Msg, MSGFLAG_VITAL, ClientID);
 }
 
@@ -660,10 +726,139 @@ void CGameContext::OnClientPredictedInput(int ClientID, void *pInput)
 		m_apPlayers[ClientID]->OnPredictedInput((CNetObj_PlayerInput *)pInput);
 }
 
+void CGameContext::SendSixupGameInfo(int ClientID)
+{
+	if(!Server()->IsSixup(ClientID) || !m_pController)
+		return;
+
+	protocol7::CNetMsg_Sv_GameInfo Msg;
+	Msg.m_GameFlags = protocol7::GAMEFLAG_TEAMS | protocol7::GAMEFLAG_FLAGS;
+	Msg.m_ScoreLimit = g_Config.m_SvScorelimit;
+	Msg.m_TimeLimit = g_Config.m_SvTimelimit;
+	Msg.m_MatchNum = (str_length(g_Config.m_SvMaprotation) && g_Config.m_SvRoundsPerMap) ? g_Config.m_SvRoundsPerMap : 0;
+	Msg.m_MatchCurrent = 1;
+	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, ClientID);
+}
+
+void CGameContext::SendSixupServerSettings(int ClientID)
+{
+	if(!Server()->IsSixup(ClientID))
+		return;
+
+	protocol7::CNetMsg_Sv_ServerSettings Msg;
+	Msg.m_KickVote = g_Config.m_SvVoteKick;
+	Msg.m_KickMin = g_Config.m_SvVoteKickMin;
+	Msg.m_SpecVote = g_Config.m_SvVoteSpectate;
+	Msg.m_TeamLock = 0;
+	Msg.m_TeamBalance = g_Config.m_SvTeambalanceTime != 0;
+	Msg.m_PlayerSlots = g_Config.m_SvMaxClients - g_Config.m_SvSpectatorSlots;
+	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, ClientID);
+}
+
+void CGameContext::SendSixupSkinChange(int ClientID)
+{
+	CPlayer *pPlayer = m_apPlayers[ClientID];
+	if(!pPlayer)
+		return;
+
+	protocol7::CNetMsg_Sv_SkinChange Msg;
+	Msg.m_ClientID = ClientID;
+	for(int p = 0; p < 6; p++)
+	{
+		Msg.m_apSkinPartNames[p] = pPlayer->m_TeeInfos.m_aaSkinPartNames[p];
+		Msg.m_aUseCustomColors[p] = pPlayer->m_TeeInfos.m_aUseCustomColors[p];
+		Msg.m_aSkinPartColors[p] = pPlayer->m_TeeInfos.m_aSkinPartColors[p];
+	}
+	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, -1);
+}
+
+void CGameContext::SendSixupClientDrop(int ClientID, const char *pReason, bool Silent)
+{
+	protocol7::CNetMsg_Sv_ClientDrop Msg;
+	Msg.m_ClientID = ClientID;
+	Msg.m_pReason = pReason ? pReason : "";
+	Msg.m_Silent = Silent ? 1 : 0;
+	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, -1);
+}
+
+void CGameContext::SendSixupTeam(int ClientID, bool Silent)
+{
+	CPlayer *pPlayer = m_apPlayers[ClientID];
+	if(!pPlayer)
+		return;
+
+	protocol7::CNetMsg_Sv_Team Msg;
+	Msg.m_ClientID = ClientID;
+	Msg.m_Team = pPlayer->GetTeam();
+	Msg.m_Silent = Silent ? 1 : 0;
+	Msg.m_CooldownTick = pPlayer->m_LastSetTeam + Server()->TickSpeed() * 3;
+	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, -1);
+}
+
+void CGameContext::SendSixupClientInfos(int ClientID)
+{
+	CPlayer *pPlayer = m_apPlayers[ClientID];
+	if(!pPlayer)
+		return;
+
+	protocol7::CNetMsg_Sv_ClientInfo NewInfo;
+	NewInfo.m_ClientID = ClientID;
+	NewInfo.m_Local = 0;
+	NewInfo.m_Team = pPlayer->GetTeam();
+	NewInfo.m_pName = Server()->ClientName(ClientID);
+	NewInfo.m_pClan = Server()->ClientClan(ClientID);
+	NewInfo.m_Country = Server()->ClientCountry(ClientID);
+	NewInfo.m_Silent = 1;
+	for(int p = 0; p < 6; p++)
+	{
+		NewInfo.m_apSkinPartNames[p] = pPlayer->m_TeeInfos.m_aaSkinPartNames[p];
+		NewInfo.m_aUseCustomColors[p] = pPlayer->m_TeeInfos.m_aUseCustomColors[p];
+		NewInfo.m_aSkinPartColors[p] = pPlayer->m_TeeInfos.m_aSkinPartColors[p];
+	}
+
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		if(i == ClientID || !m_apPlayers[i] || !Server()->ClientIngame(i))
+			continue;
+
+		if(Server()->IsSixup(i))
+			Server()->SendPackMsg(&NewInfo, MSGFLAG_VITAL | MSGFLAG_NORECORD, i);
+
+		if(Server()->IsSixup(ClientID))
+		{
+			protocol7::CNetMsg_Sv_ClientInfo Info;
+			Info.m_ClientID = i;
+			Info.m_Local = 0;
+			Info.m_Team = m_apPlayers[i]->GetTeam();
+			Info.m_pName = Server()->ClientName(i);
+			Info.m_pClan = Server()->ClientClan(i);
+			Info.m_Country = Server()->ClientCountry(i);
+			Info.m_Silent = 1;
+			for(int p = 0; p < 6; p++)
+			{
+				Info.m_apSkinPartNames[p] = m_apPlayers[i]->m_TeeInfos.m_aaSkinPartNames[p];
+				Info.m_aUseCustomColors[p] = m_apPlayers[i]->m_TeeInfos.m_aUseCustomColors[p];
+				Info.m_aSkinPartColors[p] = m_apPlayers[i]->m_TeeInfos.m_aSkinPartColors[p];
+			}
+			Server()->SendPackMsg(&Info, MSGFLAG_VITAL | MSGFLAG_NORECORD, ClientID);
+		}
+	}
+
+	if(Server()->IsSixup(ClientID))
+	{
+		NewInfo.m_Local = 1;
+		Server()->SendPackMsg(&NewInfo, MSGFLAG_VITAL | MSGFLAG_NORECORD, ClientID);
+		SendSixupGameInfo(ClientID);
+		SendSixupServerSettings(ClientID);
+	}
+}
+
 void CGameContext::OnClientEnter(int ClientID)
 {
 	//world.insert_entity(&players[client_id]);
 	m_apPlayers[ClientID]->Respawn();
+	SendSixupClientInfos(ClientID);
+
 	char aBuf[512];
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
@@ -722,6 +917,8 @@ void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 	delete m_apPlayers[ClientID];
 	m_apPlayers[ClientID] = 0;
 
+	SendSixupClientDrop(ClientID, pReason, false);
+
 	(void)m_pController->CheckTeamBalance();
 	m_VoteUpdate = true;
 
@@ -733,9 +930,135 @@ void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 	}
 }
 
+void *CGameContext::PreProcessMsg(int *pMsgID, CUnpacker *pUnpacker, int ClientID)
+{
+	if(Server()->IsSixup(ClientID))
+	{
+		void *pRawMsg = m_NetObjHandler7.SecureUnpackMsg(*pMsgID, pUnpacker);
+		if(!pRawMsg)
+			return 0;
+
+		CPlayer *pPlayer = m_apPlayers[ClientID];
+		static char s_aRawMsg[1024];
+
+		if(*pMsgID == protocol7::NETMSGTYPE_CL_SAY)
+		{
+			protocol7::CNetMsg_Cl_Say *pMsg7 = (protocol7::CNetMsg_Cl_Say *)pRawMsg;
+			CNetMsg_Cl_Say *pMsg = (CNetMsg_Cl_Say *)s_aRawMsg;
+			if(pMsg7->m_Target >= 0)
+				return 0; // whisper not supported in OB sixup v1
+			pMsg->m_Team = pMsg7->m_Mode == protocol7::CHAT_TEAM;
+			pMsg->m_pMessage = pMsg7->m_pMessage;
+		}
+		else if(*pMsgID == protocol7::NETMSGTYPE_CL_STARTINFO)
+		{
+			protocol7::CNetMsg_Cl_StartInfo *pMsg7 = (protocol7::CNetMsg_Cl_StartInfo *)pRawMsg;
+			CNetMsg_Cl_StartInfo *pMsg = (CNetMsg_Cl_StartInfo *)s_aRawMsg;
+			pMsg->m_pName = pMsg7->m_pName;
+			pMsg->m_pClan = pMsg7->m_pClan;
+			pMsg->m_Country = pMsg7->m_Country;
+			str_copy(s_aRawMsg + sizeof(*pMsg), "default", sizeof(s_aRawMsg) - sizeof(*pMsg));
+			pMsg->m_pSkin = s_aRawMsg + sizeof(*pMsg);
+			pMsg->m_UseCustomColor = pMsg7->m_aUseCustomColors[0];
+			pMsg->m_ColorBody = pMsg7->m_aSkinPartColors[0];
+			pMsg->m_ColorFeet = pMsg7->m_aSkinPartColors[4];
+			if(pPlayer)
+			{
+				for(int p = 0; p < 6; p++)
+				{
+					str_copy(pPlayer->m_TeeInfos.m_aaSkinPartNames[p], pMsg7->m_apSkinPartNames[p], sizeof(pPlayer->m_TeeInfos.m_aaSkinPartNames[p]));
+					pPlayer->m_TeeInfos.m_aUseCustomColors[p] = pMsg7->m_aUseCustomColors[p];
+					pPlayer->m_TeeInfos.m_aSkinPartColors[p] = pMsg7->m_aSkinPartColors[p];
+				}
+			}
+		}
+		else if(*pMsgID == protocol7::NETMSGTYPE_CL_SETSPECTATORMODE)
+		{
+			protocol7::CNetMsg_Cl_SetSpectatorMode *pMsg7 = (protocol7::CNetMsg_Cl_SetSpectatorMode *)pRawMsg;
+			CNetMsg_Cl_SetSpectatorMode *pMsg = (CNetMsg_Cl_SetSpectatorMode *)s_aRawMsg;
+			if(pMsg7->m_SpecMode == protocol7::SPEC_FREEVIEW)
+				pMsg->m_SpectatorID = SPEC_FREEVIEW;
+			else
+				pMsg->m_SpectatorID = pMsg7->m_SpectatorID;
+		}
+		else if(*pMsgID == protocol7::NETMSGTYPE_CL_SETTEAM)
+		{
+			protocol7::CNetMsg_Cl_SetTeam *pMsg7 = (protocol7::CNetMsg_Cl_SetTeam *)pRawMsg;
+			CNetMsg_Cl_SetTeam *pMsg = (CNetMsg_Cl_SetTeam *)s_aRawMsg;
+			pMsg->m_Team = pMsg7->m_Team;
+		}
+		else if(*pMsgID == protocol7::NETMSGTYPE_CL_EMOTICON)
+		{
+			protocol7::CNetMsg_Cl_Emoticon *pMsg7 = (protocol7::CNetMsg_Cl_Emoticon *)pRawMsg;
+			CNetMsg_Cl_Emoticon *pMsg = (CNetMsg_Cl_Emoticon *)s_aRawMsg;
+			pMsg->m_Emoticon = pMsg7->m_Emoticon;
+		}
+		else if(*pMsgID == protocol7::NETMSGTYPE_CL_VOTE)
+		{
+			protocol7::CNetMsg_Cl_Vote *pMsg7 = (protocol7::CNetMsg_Cl_Vote *)pRawMsg;
+			CNetMsg_Cl_Vote *pMsg = (CNetMsg_Cl_Vote *)s_aRawMsg;
+			pMsg->m_Vote = pMsg7->m_Vote;
+		}
+		else if(*pMsgID == protocol7::NETMSGTYPE_CL_CALLVOTE)
+		{
+			protocol7::CNetMsg_Cl_CallVote *pMsg7 = (protocol7::CNetMsg_Cl_CallVote *)pRawMsg;
+			CNetMsg_Cl_CallVote *pMsg = (CNetMsg_Cl_CallVote *)s_aRawMsg;
+			pMsg->m_Type = pMsg7->m_Type;
+			pMsg->m_Value = pMsg7->m_Value;
+			pMsg->m_Reason = pMsg7->m_Reason;
+			m_SixupCallVoteForce = pMsg7->m_Force && Server()->IsAuthed(ClientID);
+		}
+		else if(*pMsgID == protocol7::NETMSGTYPE_CL_SKINCHANGE)
+		{
+			protocol7::CNetMsg_Cl_SkinChange *pMsg7 = (protocol7::CNetMsg_Cl_SkinChange *)pRawMsg;
+			if(pPlayer)
+			{
+				if(g_Config.m_SvSpamprotection && pPlayer->m_LastChangeInfo && pPlayer->m_LastChangeInfo+Server()->TickSpeed()*5 > Server()->Tick())
+					return 0;
+				pPlayer->m_LastChangeInfo = Server()->Tick();
+				for(int p = 0; p < 6; p++)
+				{
+					str_copy(pPlayer->m_TeeInfos.m_aaSkinPartNames[p], pMsg7->m_apSkinPartNames[p], sizeof(pPlayer->m_TeeInfos.m_aaSkinPartNames[p]));
+					pPlayer->m_TeeInfos.m_aUseCustomColors[p] = pMsg7->m_aUseCustomColors[p];
+					pPlayer->m_TeeInfos.m_aSkinPartColors[p] = pMsg7->m_aSkinPartColors[p];
+				}
+				pPlayer->m_TeeInfos.m_UseCustomColor = pMsg7->m_aUseCustomColors[0];
+				pPlayer->m_TeeInfos.m_ColorBody = pMsg7->m_aSkinPartColors[0];
+				pPlayer->m_TeeInfos.m_ColorFeet = pMsg7->m_aSkinPartColors[4];
+				m_pController->OnPlayerInfoChange(pPlayer);
+				SendSixupSkinChange(ClientID);
+			}
+			return 0;
+		}
+		else if(*pMsgID == protocol7::NETMSGTYPE_CL_COMMAND)
+		{
+			protocol7::CNetMsg_Cl_Command *pMsg7 = (protocol7::CNetMsg_Cl_Command *)pRawMsg;
+			char aCmd[256];
+			if(pMsg7->m_Arguments && pMsg7->m_Arguments[0])
+				str_format(aCmd, sizeof(aCmd), "/%s %s", pMsg7->m_Name, pMsg7->m_Arguments);
+			else
+				str_format(aCmd, sizeof(aCmd), "/%s", pMsg7->m_Name);
+			HandleChatCommand(ClientID, aCmd);
+			return 0;
+		}
+		else if(*pMsgID == protocol7::NETMSGTYPE_CL_KILL)
+		{
+			// empty payload — fall through with dummy buffer
+		}
+		else
+			return 0;
+
+		*pMsgID = Msg_SevenToSix(*pMsgID);
+		if(*pMsgID < 0)
+			return 0;
+		return s_aRawMsg;
+	}
+	return m_NetObjHandler.SecureUnpackMsg(*pMsgID, pUnpacker);
+}
+
 void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 {
-	void *pRawMsg = m_NetObjHandler.SecureUnpackMsg(MsgID, pUnpacker);
+	void *pRawMsg = PreProcessMsg(&MsgID, pUnpacker, ClientID);
 	CPlayer *pPlayer = m_apPlayers[ClientID];
 
 	if(!pRawMsg)
@@ -944,6 +1267,13 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			pPlayer->m_VotePos = m_VotePos = 1;
 			m_VoteCreator = ClientID;
 			pPlayer->m_LastVoteCall = Now;
+			if(m_SixupCallVoteForce)
+			{
+				m_SixupCallVoteForce = false;
+				Console()->ExecuteLine(aCmd);
+				m_VoteEnforce = VOTE_ENFORCE_YES;
+				EndVote();
+			}
 		}
 	}
 	else if(MsgID == NETMSGTYPE_CL_VOTE)
@@ -1157,6 +1487,9 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		pPlayer->m_TeeInfos.m_ColorBody = pMsg->m_ColorBody;
 		pPlayer->m_TeeInfos.m_ColorFeet = pMsg->m_ColorFeet;
 		m_pController->OnPlayerInfoChange(pPlayer);
+		// refresh sixup clients (name/clan/skin)
+		SendSixupClientDrop(ClientID, "", true);
+		SendSixupClientInfos(ClientID);
 	}
 	else if (MsgID == NETMSGTYPE_CL_EMOTICON && !m_World.m_Paused)
 	{

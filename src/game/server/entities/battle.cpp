@@ -2,6 +2,7 @@
 #include <game/generated/server_data.h>
 #include <game/server/gamecontext.h>
 #include <game/server/player.h>
+#include <game/server/sixup_snap.h>
 
 #include "battle.h"
 #include "character.h"
@@ -408,19 +409,21 @@ void CBattle::SnapProjectile(int ID, vec2 Pos, int Type, int StartTickOffset)
 
 void CBattle::SnapPickup(int ID, vec2 Pos, int Type)
 {
+	bool Sixup = m_SnapClient >= 0 && Server()->IsSixup(m_SnapClient);
 	CNetObj_Pickup *pPickup = static_cast<CNetObj_Pickup *>(
-		Server()->SnapNewItem(NETOBJTYPE_PICKUP, ID, sizeof(CNetObj_Pickup)));
+		Server()->SnapNewItem(NETOBJTYPE_PICKUP, ID, PickupSnapSize(Sixup)));
 	if(!pPickup)
 		return;
 	pPickup->m_X = (int)Pos.x;
 	pPickup->m_Y = (int)Pos.y;
 	pPickup->m_Type = Type;
-	pPickup->m_Subtype = 0;
+	if(!Sixup)
+		pPickup->m_Subtype = 0;
 }
 
 void CBattle::Snap(int SnappingClient)
 {
-	(void)SnappingClient;
+	m_SnapClient = SnappingClient;
 	// Entry cooldown is interaction state, not visibility state. This matters
 	// after a vehicle has returned to spawn; ordinary abandoned vehicles remain
 	// visible and immediately reclaimable.

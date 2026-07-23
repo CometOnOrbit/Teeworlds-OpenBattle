@@ -122,9 +122,10 @@ class CSnapshotBuilder
 
 	int m_aOffsets[MAX_ITEMS];
 	int m_NumItems;
+	bool m_Sixup;
 
 public:
-	void Init();
+	void Init(bool Sixup = false);
 
 	void *NewItem(int Type, int ID, int Size);
 

@@ -2,6 +2,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <new>
 #include <engine/shared/config.h>
+#include <game/generated/protocol7.h>
+#include <game/server/sixup_snap.h>
 #include "player.h"
 
 
@@ -33,6 +35,16 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	str_copy(m_aLanguage, "en", sizeof(m_aLanguage));
 	m_TipFlags = 0;
 	m_EnterTick = Server()->Tick();
+
+	mem_zero(&m_TeeInfos, sizeof(m_TeeInfos));
+	str_copy(m_TeeInfos.m_SkinName, "default", sizeof(m_TeeInfos.m_SkinName));
+	static const char *s_apDefaultParts[6] = {"default", "", "", "standard", "standard", "standard"};
+	for(int p = 0; p < 6; p++)
+	{
+		str_copy(m_TeeInfos.m_aaSkinPartNames[p], s_apDefaultParts[p], sizeof(m_TeeInfos.m_aaSkinPartNames[p]));
+		m_TeeInfos.m_aUseCustomColors[p] = 0;
+		m_TeeInfos.m_aSkinPartColors[p] = 0;
+	}
 }
 
 bool CPlayer::TryConsumeTip(int Flag)
@@ -191,42 +203,75 @@ void CPlayer::Snap(int SnappingClient)
 	if(!Server()->ClientIngame(m_ClientID))
 		return;
 
-	CNetObj_ClientInfo *pClientInfo = static_cast<CNetObj_ClientInfo *>(Server()->SnapNewItem(NETOBJTYPE_CLIENTINFO, m_ClientID, sizeof(CNetObj_ClientInfo)));
-	if(!pClientInfo)
-		return;
-
-	StrToInts(&pClientInfo->m_Name0, 4, Server()->ClientName(m_ClientID));
-	StrToInts(&pClientInfo->m_Clan0, 3, Server()->ClientClan(m_ClientID));
-	pClientInfo->m_Country = Server()->ClientCountry(m_ClientID);
-	StrToInts(&pClientInfo->m_Skin0, 6, m_TeeInfos.m_SkinName);
-	pClientInfo->m_UseCustomColor = m_TeeInfos.m_UseCustomColor;
-	pClientInfo->m_ColorBody = m_TeeInfos.m_ColorBody;
-	pClientInfo->m_ColorFeet = m_TeeInfos.m_ColorFeet;
-
-	CNetObj_PlayerInfo *pPlayerInfo = static_cast<CNetObj_PlayerInfo *>(Server()->SnapNewItem(NETOBJTYPE_PLAYERINFO, m_ClientID, sizeof(CNetObj_PlayerInfo)));
-	if(!pPlayerInfo)
-		return;
-
-	pPlayerInfo->m_Latency = SnappingClient == -1 ? m_Latency.m_Min : GameServer()->m_apPlayers[SnappingClient]->m_aActLatency[m_ClientID];
-	pPlayerInfo->m_Local = 0;
-	pPlayerInfo->m_ClientID = m_ClientID;
-	pPlayerInfo->m_Score = m_Score;
-	pPlayerInfo->m_Team = m_Team;
+	int Latency = SnappingClient == -1 ? m_Latency.m_Min : GameServer()->m_apPlayers[SnappingClient]->m_aActLatency[m_ClientID];
+	int Team = m_Team;
 	if(m_BattlefieldAimCamera && m_ClientID == SnappingClient)
-		pPlayerInfo->m_Team = TEAM_SPECTATORS;
+		Team = TEAM_SPECTATORS;
 
-	if(m_ClientID == SnappingClient)
-		pPlayerInfo->m_Local = 1;
-
-	if(m_ClientID == SnappingClient && m_Team == TEAM_SPECTATORS)
+	if(SnappingClient < 0 || !Server()->IsSixup(SnappingClient))
 	{
-		CNetObj_SpectatorInfo *pSpectatorInfo = static_cast<CNetObj_SpectatorInfo *>(Server()->SnapNewItem(NETOBJTYPE_SPECTATORINFO, m_ClientID, sizeof(CNetObj_SpectatorInfo)));
-		if(!pSpectatorInfo)
+		CNetObj_ClientInfo *pClientInfo = static_cast<CNetObj_ClientInfo *>(Server()->SnapNewItem(NETOBJTYPE_CLIENTINFO, m_ClientID, sizeof(CNetObj_ClientInfo)));
+		if(!pClientInfo)
 			return;
 
-		pSpectatorInfo->m_SpectatorID = m_SpectatorID;
-		pSpectatorInfo->m_X = m_ViewPos.x;
-		pSpectatorInfo->m_Y = m_ViewPos.y;
+		StrToInts(&pClientInfo->m_Name0, 4, Server()->ClientName(m_ClientID));
+		StrToInts(&pClientInfo->m_Clan0, 3, Server()->ClientClan(m_ClientID));
+		pClientInfo->m_Country = Server()->ClientCountry(m_ClientID);
+		StrToInts(&pClientInfo->m_Skin0, 6, m_TeeInfos.m_SkinName);
+		pClientInfo->m_UseCustomColor = m_TeeInfos.m_UseCustomColor;
+		pClientInfo->m_ColorBody = m_TeeInfos.m_ColorBody;
+		pClientInfo->m_ColorFeet = m_TeeInfos.m_ColorFeet;
+
+		CNetObj_PlayerInfo *pPlayerInfo = static_cast<CNetObj_PlayerInfo *>(Server()->SnapNewItem(NETOBJTYPE_PLAYERINFO, m_ClientID, sizeof(CNetObj_PlayerInfo)));
+		if(!pPlayerInfo)
+			return;
+
+		pPlayerInfo->m_Latency = Latency;
+		pPlayerInfo->m_Local = 0;
+		pPlayerInfo->m_ClientID = m_ClientID;
+		pPlayerInfo->m_Score = m_Score;
+		pPlayerInfo->m_Team = Team;
+
+		if(m_ClientID == SnappingClient)
+			pPlayerInfo->m_Local = 1;
+
+		if(m_ClientID == SnappingClient && m_Team == TEAM_SPECTATORS)
+		{
+			CNetObj_SpectatorInfo *pSpectatorInfo = static_cast<CNetObj_SpectatorInfo *>(Server()->SnapNewItem(NETOBJTYPE_SPECTATORINFO, m_ClientID, sizeof(CNetObj_SpectatorInfo)));
+			if(!pSpectatorInfo)
+				return;
+
+			pSpectatorInfo->m_SpectatorID = m_SpectatorID;
+			pSpectatorInfo->m_X = m_ViewPos.x;
+			pSpectatorInfo->m_Y = m_ViewPos.y;
+		}
+	}
+	else
+	{
+		// 0.7: CLIENTINFO is a message, not a snap item
+		protocol7::CNetObj_PlayerInfo *pPlayerInfo = static_cast<protocol7::CNetObj_PlayerInfo *>(Server()->SnapNewItem(NETOBJTYPE_PLAYERINFO, m_ClientID, sizeof(protocol7::CNetObj_PlayerInfo)));
+		if(!pPlayerInfo)
+			return;
+
+		pPlayerInfo->m_PlayerFlags = PlayerFlags_SixToSeven(m_PlayerFlags);
+		if(Server()->IsAuthed(m_ClientID))
+			pPlayerInfo->m_PlayerFlags |= protocol7::PLAYERFLAG_ADMIN;
+		pPlayerInfo->m_Score = m_Score;
+		pPlayerInfo->m_Latency = Latency;
+
+		if(m_ClientID == SnappingClient && (m_Team == TEAM_SPECTATORS || m_BattlefieldAimCamera))
+		{
+			protocol7::CNetObj_SpectatorInfo *pSpectatorInfo = static_cast<protocol7::CNetObj_SpectatorInfo *>(Server()->SnapNewItem(NETOBJTYPE_SPECTATORINFO, m_ClientID, sizeof(protocol7::CNetObj_SpectatorInfo)));
+			if(!pSpectatorInfo)
+				return;
+
+			pSpectatorInfo->m_SpecMode = protocol7::SPEC_FREEVIEW;
+			if(!m_BattlefieldAimCamera && m_SpectatorID != SPEC_FREEVIEW)
+				pSpectatorInfo->m_SpecMode = protocol7::SPEC_PLAYER;
+			pSpectatorInfo->m_SpectatorID = m_BattlefieldAimCamera ? m_ClientID : m_SpectatorID;
+			pSpectatorInfo->m_X = m_ViewPos.x;
+			pSpectatorInfo->m_Y = m_ViewPos.y;
+		}
 	}
 }
 
@@ -363,6 +408,7 @@ void CPlayer::SetTeam(int Team)
 	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 
 	GameServer()->m_pController->OnPlayerInfoChange(GameServer()->m_apPlayers[m_ClientID]);
+	GameServer()->SendSixupTeam(m_ClientID, true);
 
 	if(Team == TEAM_SPECTATORS)
 	{

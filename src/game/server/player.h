@@ -117,6 +117,9 @@ public:
 	struct
 	{
 		char m_SkinName[64];
+		char m_aaSkinPartNames[6][24];
+		int m_aUseCustomColors[6];
+		int m_aSkinPartColors[6];
 		int m_UseCustomColor;
 		int m_ColorBody;
 		int m_ColorFeet;

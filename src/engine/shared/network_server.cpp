@@ -1,6 +1,8 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
+#include <base/hash_ctxt.h>
 #include <base/system.h>
+#include "config.h"
 #include "network.h"
 
 #define MACRO_LIST_LINK_FIRST(Object, First, Prev, Next) \
@@ -44,6 +46,8 @@ bool CNetServer::Open(NETADDR BindAddr, int MaxClients, int MaxClientsPerIP, int
 		m_MaxClients = 1;
 
 	m_MaxClientsPerIP = MaxClientsPerIP;
+
+	secure_random_fill(m_aSecurityTokenSeed, sizeof(m_aSecurityTokenSeed));
 
 	for(int i = 0; i < NET_MAX_CLIENTS; i++)
 		m_aSlots[i].m_Connection.Init(m_Socket);
@@ -264,6 +268,149 @@ int CNetServer::Update()
 	return 0;
 }
 
+SECURITY_TOKEN CNetServer::GetToken(const NETADDR &Addr)
+{
+	SHA256_CTX Sha256;
+	sha256_init(&Sha256);
+	sha256_update(&Sha256, m_aSecurityTokenSeed, sizeof(m_aSecurityTokenSeed));
+	sha256_update(&Sha256, &Addr, 20); // omit port, same as DDNet
+
+	SECURITY_TOKEN SecurityToken = ToSecurityToken(sha256_finish(&Sha256).data);
+	if(SecurityToken == NET_SECURITY_TOKEN_UNKNOWN || SecurityToken == NET_SECURITY_TOKEN_UNSUPPORTED)
+		SecurityToken = 1;
+	return SecurityToken;
+}
+
+SECURITY_TOKEN CNetServer::GetGlobalToken()
+{
+	static const NETADDR NullAddr = {0};
+	return GetToken(NullAddr);
+}
+
+int CNetServer::GetClientSlot(const NETADDR &Addr)
+{
+	for(int i = 0; i < MaxClients(); i++)
+	{
+		if(m_aSlots[i].m_Connection.State() != NET_CONNSTATE_OFFLINE &&
+			m_aSlots[i].m_Connection.State() != NET_CONNSTATE_ERROR)
+		{
+			NETADDR Peer = m_aSlots[i].m_Connection.PeerAddress();
+			if(net_addr_comp(&Peer, &Addr) == 0)
+				return i;
+		}
+	}
+	return -1;
+}
+
+int CNetServer::TryAcceptClient(NETADDR &Addr, SECURITY_TOKEN SecurityToken, bool VanillaAuth, bool Sixup, SECURITY_TOKEN Token)
+{
+	(void)VanillaAuth;
+	if(Sixup && !g_Config.m_SvSixup)
+	{
+		const char aMsg[] = "0.7 connections are not accepted at this time";
+		CNetBase::SendControlMsg(m_Socket, &Addr, 0, NET_CTRLMSG_CLOSE, aMsg, sizeof(aMsg), SecurityToken, Sixup);
+		return -1;
+	}
+
+	NETADDR ThisAddr = Addr;
+	ThisAddr.port = 0;
+	int FoundAddr = 0;
+	for(int i = 0; i < MaxClients(); ++i)
+	{
+		if(m_aSlots[i].m_Connection.State() == NET_CONNSTATE_OFFLINE)
+			continue;
+		NETADDR Other = m_aSlots[i].m_Connection.PeerAddress();
+		Other.port = 0;
+		if(net_addr_comp(&ThisAddr, &Other) == 0)
+			FoundAddr++;
+	}
+	if(FoundAddr >= m_MaxClientsPerIP)
+	{
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "Only %d players with the same IP are allowed", m_MaxClientsPerIP);
+		CNetBase::SendControlMsg(m_Socket, &Addr, 0, NET_CTRLMSG_CLOSE, aBuf, str_length(aBuf) + 1, SecurityToken, Sixup);
+		return -1;
+	}
+
+	int Slot = -1;
+	for(int i = 0; i < MaxClients(); i++)
+	{
+		if(m_aSlots[i].m_Connection.State() == NET_CONNSTATE_OFFLINE)
+		{
+			Slot = i;
+			break;
+		}
+	}
+	if(Slot == -1)
+	{
+		const char aFullMsg[] = "This server is full";
+		CNetBase::SendControlMsg(m_Socket, &Addr, 0, NET_CTRLMSG_CLOSE, aFullMsg, sizeof(aFullMsg), SecurityToken, Sixup);
+		return -1;
+	}
+
+	m_aSlots[Slot].m_Connection.DirectInit(Addr, SecurityToken, Token, Sixup);
+	if(m_pfnNewClient)
+		m_pfnNewClient(Slot, m_UserPtr, Sixup);
+	return Slot;
+}
+
+int CNetServer::OnSixupCtrlMsg(NETADDR &Addr, CNetChunk *pChunk, int ControlMsg, const CNetPacketConstruct &Packet, SECURITY_TOKEN &ResponseToken, SECURITY_TOKEN Token)
+{
+	if(m_RecvUnpacker.m_Data.m_DataSize < 5 || ClientExists(Addr))
+		return 0;
+
+	mem_copy(&ResponseToken, Packet.m_aChunkData + 1, 4);
+
+	if(ControlMsg == 5)
+	{
+		if(m_RecvUnpacker.m_Data.m_DataSize >= 512)
+		{
+			SendTokenSixup(Addr, ResponseToken);
+			return 0;
+		}
+		pChunk->m_Flags = 0;
+		pChunk->m_ClientID = -1;
+		pChunk->m_Address = Addr;
+		pChunk->m_DataSize = 0;
+		return 1;
+	}
+	else if(ControlMsg == NET_CTRLMSG_CONNECT)
+	{
+		SECURITY_TOKEN MyToken = GetToken(Addr);
+		unsigned char aToken[4];
+		mem_copy(aToken, &MyToken, 4);
+		CNetBase::SendControlMsg(m_Socket, &Addr, 0, NET_CTRLMSG_CONNECTACCEPT, aToken, sizeof(aToken), ResponseToken, true);
+		if(Token == MyToken)
+			TryAcceptClient(Addr, ResponseToken, false, true, Token);
+	}
+	return 0;
+}
+
+void CNetServer::SendTokenSixup(NETADDR &Addr, SECURITY_TOKEN Token)
+{
+	SECURITY_TOKEN MyToken = GetToken(Addr);
+	unsigned char aBuf[512];
+	mem_zero(aBuf, sizeof(aBuf));
+	mem_copy(aBuf, &MyToken, 4);
+	int Size = (Token == NET_SECURITY_TOKEN_UNKNOWN) ? 512 : 4;
+	CNetBase::SendControlMsg(m_Socket, &Addr, 0, 5, aBuf, Size, Token, true);
+}
+
+int CNetServer::SendConnlessSixup(CNetChunk *pChunk, SECURITY_TOKEN ResponseToken)
+{
+	if(pChunk->m_DataSize > NET_MAX_PACKETSIZE - 9)
+		return -1;
+
+	unsigned char aBuffer[NET_MAX_PACKETSIZE];
+	aBuffer[0] = (NET_PACKETFLAG_CONNLESS << 2) | 1;
+	SECURITY_TOKEN Token = GetToken(pChunk->m_Address);
+	mem_copy(aBuffer + 1, &ResponseToken, 4);
+	mem_copy(aBuffer + 5, &Token, 4);
+	mem_copy(aBuffer + 9, pChunk->m_pData, pChunk->m_DataSize);
+	net_udp_send(m_Socket, &pChunk->m_Address, aBuffer, pChunk->m_DataSize + 9);
+	return 0;
+}
+
 /*
 	TODO: chopp up this function into smaller working parts
 */
@@ -275,142 +422,90 @@ int CNetServer::Recv(CNetChunk *pChunk)
 	{
 		NETADDR Addr;
 
-		// check for a chunk
 		if(m_RecvUnpacker.FetchChunk(pChunk))
 			return 1;
 
-		// TODO: empty the recvinfo
 		int Bytes = net_udp_recv(m_Socket, &Addr, m_RecvUnpacker.m_aBuffer, NET_MAX_PACKETSIZE);
-
-		// no more packets for now
 		if(Bytes <= 0)
 			break;
 
-		if(CNetBase::UnpackPacket(m_RecvUnpacker.m_aBuffer, Bytes, &m_RecvUnpacker.m_Data) == 0)
+		SECURITY_TOKEN Token = NET_SECURITY_TOKEN_UNSUPPORTED;
+		SECURITY_TOKEN ResponseToken = NET_SECURITY_TOKEN_UNKNOWN;
+		bool Sixup = false;
+		if(CNetBase::UnpackPacket(m_RecvUnpacker.m_aBuffer, Bytes, &m_RecvUnpacker.m_Data, Sixup, &Token, &ResponseToken) != 0)
+			continue;
+
+		CBan *pBan = 0;
+		NETADDR BanAddr = Addr;
+		int IpHash = (BanAddr.ip[0]+BanAddr.ip[1]+BanAddr.ip[2]+BanAddr.ip[3]+BanAddr.ip[4]+BanAddr.ip[5]+BanAddr.ip[6]+BanAddr.ip[7]+
+						BanAddr.ip[8]+BanAddr.ip[9]+BanAddr.ip[10]+BanAddr.ip[11]+BanAddr.ip[12]+BanAddr.ip[13]+BanAddr.ip[14]+BanAddr.ip[15])&0xff;
+		BanAddr.port = 0;
+		for(pBan = m_aBans[IpHash]; pBan; pBan = pBan->m_pHashNext)
 		{
-			CBan *pBan = 0;
-			NETADDR BanAddr = Addr;
-			int IpHash = (BanAddr.ip[0]+BanAddr.ip[1]+BanAddr.ip[2]+BanAddr.ip[3]+BanAddr.ip[4]+BanAddr.ip[5]+BanAddr.ip[6]+BanAddr.ip[7]+
-							BanAddr.ip[8]+BanAddr.ip[9]+BanAddr.ip[10]+BanAddr.ip[11]+BanAddr.ip[12]+BanAddr.ip[13]+BanAddr.ip[14]+BanAddr.ip[15])&0xff;
-			int Found = 0;
-			BanAddr.port = 0;
-
-			// search a ban
-			for(pBan = m_aBans[IpHash]; pBan; pBan = pBan->m_pHashNext)
+			if(net_addr_comp(&pBan->m_Info.m_Addr, &BanAddr) == 0)
+				break;
+		}
+		if(pBan)
+		{
+			char BanStr[128];
+			if(pBan->m_Info.m_Expires > -1)
 			{
-				if(net_addr_comp(&pBan->m_Info.m_Addr, &BanAddr) == 0)
-					break;
-			}
-
-			// check if we just should drop the packet
-			if(pBan)
-			{
-				// banned, reply with a message
-				char BanStr[128];
-				if(pBan->m_Info.m_Expires > -1)
-				{
-					int Mins = ((pBan->m_Info.m_Expires - Now)+59)/60;
-					if(Mins <= 1)
-						str_format(BanStr, sizeof(BanStr), "Banned for 1 minute (%s)", pBan->m_Info.m_Reason);
-					else
-						str_format(BanStr, sizeof(BanStr), "Banned for %d minutes (%s)", Mins, pBan->m_Info.m_Reason);
-				}
+				int Mins = ((pBan->m_Info.m_Expires - Now)+59)/60;
+				if(Mins <= 1)
+					str_format(BanStr, sizeof(BanStr), "Banned for 1 minute (%s)", pBan->m_Info.m_Reason);
 				else
-					str_format(BanStr, sizeof(BanStr), "Banned for life (%s)", pBan->m_Info.m_Reason);
-				CNetBase::SendControlMsg(m_Socket, &Addr, 0, NET_CTRLMSG_CLOSE, BanStr, str_length(BanStr)+1);
-				continue;
-			}
-
-			if(m_RecvUnpacker.m_Data.m_Flags&NET_PACKETFLAG_CONNLESS)
-			{
-				pChunk->m_Flags = NETSENDFLAG_CONNLESS;
-				pChunk->m_ClientID = -1;
-				pChunk->m_Address = Addr;
-				pChunk->m_DataSize = m_RecvUnpacker.m_Data.m_DataSize;
-				pChunk->m_pData = m_RecvUnpacker.m_Data.m_aChunkData;
-				return 1;
+					str_format(BanStr, sizeof(BanStr), "Banned for %d minutes (%s)", Mins, pBan->m_Info.m_Reason);
 			}
 			else
+				str_format(BanStr, sizeof(BanStr), "Banned for life (%s)", pBan->m_Info.m_Reason);
+			CNetBase::SendControlMsg(m_Socket, &Addr, 0, NET_CTRLMSG_CLOSE, BanStr, str_length(BanStr)+1, Token, Sixup);
+			continue;
+		}
+
+		if(m_RecvUnpacker.m_Data.m_Flags&NET_PACKETFLAG_CONNLESS)
+		{
+			if(Sixup && Token != GetToken(Addr) && Token != GetGlobalToken())
+				continue;
+
+			pChunk->m_Flags = NETSENDFLAG_CONNLESS;
+			pChunk->m_ClientID = -1;
+			pChunk->m_Address = Addr;
+			pChunk->m_DataSize = m_RecvUnpacker.m_Data.m_DataSize;
+			pChunk->m_pData = m_RecvUnpacker.m_Data.m_aChunkData;
+			return 1;
+		}
+
+		if(m_RecvUnpacker.m_Data.m_Flags & NET_PACKETFLAG_CONTROL &&
+			m_RecvUnpacker.m_Data.m_DataSize == 0)
+			continue;
+
+		int Slot = GetClientSlot(Addr);
+		if(!Sixup && Slot != -1 && m_aSlots[Slot].m_Connection.m_Sixup)
+		{
+			Sixup = true;
+			if(CNetBase::UnpackPacket(m_RecvUnpacker.m_aBuffer, Bytes, &m_RecvUnpacker.m_Data, Sixup, &Token, &ResponseToken) != 0)
+				continue;
+		}
+
+		if(Slot != -1)
+		{
+			if(m_aSlots[Slot].m_Connection.Feed(&m_RecvUnpacker.m_Data, &Addr, Token))
 			{
-				// TODO: check size here
-				if(m_RecvUnpacker.m_Data.m_Flags&NET_PACKETFLAG_CONTROL && m_RecvUnpacker.m_Data.m_aChunkData[0] == NET_CTRLMSG_CONNECT)
-				{
-					Found = 0;
-
-					// check if we already got this client
-					for(int i = 0; i < MaxClients(); i++)
-					{
-						NETADDR PeerAddr = m_aSlots[i].m_Connection.PeerAddress();
-						if(m_aSlots[i].m_Connection.State() != NET_CONNSTATE_OFFLINE &&
-							net_addr_comp(&PeerAddr, &Addr) == 0)
-						{
-							Found = 1; // silent ignore.. we got this client already
-							break;
-						}
-					}
-
-					// client that wants to connect
-					if(!Found)
-					{
-						// only allow a specific number of players with the same ip
-						NETADDR ThisAddr = Addr, OtherAddr;
-						int FoundAddr = 1;
-						ThisAddr.port = 0;
-						for(int i = 0; i < MaxClients(); ++i)
-						{
-							if(m_aSlots[i].m_Connection.State() == NET_CONNSTATE_OFFLINE)
-								continue;
-
-							OtherAddr = m_aSlots[i].m_Connection.PeerAddress();
-							OtherAddr.port = 0;
-							if(!net_addr_comp(&ThisAddr, &OtherAddr))
-							{
-								if(FoundAddr++ >= m_MaxClientsPerIP)
-								{
-									char aBuf[128];
-									str_format(aBuf, sizeof(aBuf), "Only %d players with the same IP are allowed", m_MaxClientsPerIP);
-									CNetBase::SendControlMsg(m_Socket, &Addr, 0, NET_CTRLMSG_CLOSE, aBuf, sizeof(aBuf));
-									return 0;
-								}
-							}
-						}
-
-						for(int i = 0; i < MaxClients(); i++)
-						{
-							if(m_aSlots[i].m_Connection.State() == NET_CONNSTATE_OFFLINE)
-							{
-								Found = 1;
-								m_aSlots[i].m_Connection.Feed(&m_RecvUnpacker.m_Data, &Addr);
-								if(m_pfnNewClient)
-									m_pfnNewClient(i, m_UserPtr);
-								break;
-							}
-						}
-
-						if(!Found)
-						{
-							const char FullMsg[] = "This server is full";
-							CNetBase::SendControlMsg(m_Socket, &Addr, 0, NET_CTRLMSG_CLOSE, FullMsg, sizeof(FullMsg));
-						}
-					}
-				}
-				else
-				{
-					// normal packet, find matching slot
-					for(int i = 0; i < MaxClients(); i++)
-					{
-						NETADDR PeerAddr = m_aSlots[i].m_Connection.PeerAddress();
-						if(net_addr_comp(&PeerAddr, &Addr) == 0)
-						{
-							if(m_aSlots[i].m_Connection.Feed(&m_RecvUnpacker.m_Data, &Addr))
-							{
-								if(m_RecvUnpacker.m_Data.m_DataSize)
-									m_RecvUnpacker.Start(&Addr, &m_aSlots[i].m_Connection, i);
-							}
-						}
-					}
-				}
+				if(m_RecvUnpacker.m_Data.m_DataSize)
+					m_RecvUnpacker.Start(&Addr, &m_aSlots[Slot].m_Connection, Slot);
 			}
+		}
+		else if(Sixup)
+		{
+			if(OnSixupCtrlMsg(Addr, pChunk, m_RecvUnpacker.m_Data.m_aChunkData[0], m_RecvUnpacker.m_Data, ResponseToken, Token) == 1)
+				return 1;
+		}
+		else if(m_RecvUnpacker.m_Data.m_Flags&NET_PACKETFLAG_CONTROL &&
+			m_RecvUnpacker.m_Data.m_aChunkData[0] == NET_CTRLMSG_CONNECT)
+		{
+			// classic 0.6 connect (no token)
+			CNetBase::SendControlMsg(m_Socket, &Addr, 0, NET_CTRLMSG_CONNECTACCEPT, 0, 0, NET_SECURITY_TOKEN_UNSUPPORTED, false);
+			TryAcceptClient(Addr, NET_SECURITY_TOKEN_UNSUPPORTED, false, false, 0);
 		}
 	}
 	return 0;

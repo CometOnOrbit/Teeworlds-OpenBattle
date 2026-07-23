@@ -43,8 +43,11 @@ public:
 
 	void Reset(const void *pData, int Size);
 	int GetInt();
+	int GetIntOrDefault(int Default);
 	const char *GetString(int SanitizeType = SANITIZE);
 	const unsigned char *GetRaw(int Size);
+	const unsigned char *GetCurrent() const { return m_pCurrent; }
+	int RemainingSize() const { return (int)(m_pEnd - m_pCurrent); }
 	bool Error() const { return m_Error; }
 };
 

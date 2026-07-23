@@ -27,6 +27,7 @@ private:
 	int m_FirstHealthCooldown;
 	int m_SecondHealthCooldown;
 	vec2 m_CurrentPos;
+	int m_SnapClient;
 };
 
 #endif

@@ -492,6 +492,12 @@ int net_host_lookup(const char *hostname, NETADDR *addr, int types);
 int net_addr_comp(const NETADDR *a, const NETADDR *b);
 
 /*
+	Function: net_addr_comp_noport
+		Compares two network addresses ignoring port.
+*/
+int net_addr_comp_noport(const NETADDR *a, const NETADDR *b);
+
+/*
 	Function: net_addr_str
 		Turns a network address into a representive string.
 
@@ -951,6 +957,16 @@ const char *str_find(const char *haystack, const char *needle);
 void str_hex(char *dst, int dst_size, const void *data, int data_size);
 
 /*
+	Function: str_hex_decode
+		Takes a hex string without spaces between bytes and returns a byte array.
+	Returns:
+		2 - String doesn't exactly fit the buffer
+		1 - Invalid character in string
+		0 - Success
+*/
+int str_hex_decode(void *dst, int dst_size, const char *src);
+
+/*
 	Function: str_timestamp
 		Copies a time stamp in the format year-month-day_hour-minute-second to the string.
 
@@ -1182,6 +1198,8 @@ float str_tofloat(const char *str);
 int str_isspace(char c);
 char str_uppercase(char c);
 unsigned str_quickhash(const char *str);
+int secure_random_init();
+void secure_random_fill(void *bytes, unsigned length);
 
 /*
 	Function: gui_messagebox

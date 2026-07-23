@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <game/generated/protocol.h>
 #include <game/server/gamecontext.h>
+#include <game/server/sixup_snap.h>
 #include "pickup.h"
 
 CPickup::CPickup(CGameWorld *pGameWorld, int Type, int SubType)
@@ -122,12 +123,18 @@ void CPickup::Snap(int SnappingClient)
 	if(m_SpawnTick != -1 || NetworkClipped(SnappingClient))
 		return;
 
-	CNetObj_Pickup *pP = static_cast<CNetObj_Pickup *>(Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_ID, sizeof(CNetObj_Pickup)));
+	bool Sixup = SnappingClient >= 0 && Server()->IsSixup(SnappingClient);
+	CNetObj_Pickup *pP = static_cast<CNetObj_Pickup *>(Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_ID, PickupSnapSize(Sixup)));
 	if(!pP)
 		return;
 
 	pP->m_X = (int)m_Pos.x;
 	pP->m_Y = (int)m_Pos.y;
-	pP->m_Type = m_Type;
-	pP->m_Subtype = m_Subtype;
+	if(Sixup)
+		pP->m_Type = PickupTypeSeven(m_Type, m_Subtype);
+	else
+	{
+		pP->m_Type = m_Type;
+		pP->m_Subtype = m_Subtype;
+	}
 }

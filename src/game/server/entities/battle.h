@@ -48,6 +48,7 @@ private:
 	CCharacter *m_pDriver;
 	int m_Type;
 	int m_KeyTeam;
+	int m_SnapClient;
 	int m_Health;
 	int m_RespawnTimer;
 	int m_EnterCooldown;

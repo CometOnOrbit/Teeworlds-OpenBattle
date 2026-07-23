@@ -27,6 +27,9 @@ public:
 	void *Create(int Type, int Size, int Mask = -1);
 	void Clear();
 	void Snap(int SnappingClient);
+
+private:
+	bool OverrideEvent(int SnappingClient, int *pType, int *pSize, const char **ppData);
 };
 
 #endif

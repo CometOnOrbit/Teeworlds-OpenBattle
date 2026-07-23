@@ -3,7 +3,9 @@
 #ifndef ENGINE_SERVER_SERVER_H
 #define ENGINE_SERVER_SERVER_H
 
+#include <base/hash.h>
 #include <engine/server.h>
+#include "register.h"
 
 class CSnapIDPool
 {
@@ -104,6 +106,8 @@ public:
 
 		const IConsole::CCommandInfo *m_pRconCmdToSend;
 
+		bool m_Sixup;
+
 		void Reset();
 	};
 
@@ -130,12 +134,20 @@ public:
 
 	char m_aCurrentMap[64];
 	unsigned m_CurrentMapCrc;
+	SHA256_DIGEST m_CurrentMapSha256;
 	unsigned char *m_pCurrentMapData;
 	int m_CurrentMapSize;
+
+	unsigned m_CurrentMapCrcSeven;
+	SHA256_DIGEST m_CurrentMapSha256Seven;
+	unsigned char *m_pCurrentMapDataSeven;
+	int m_CurrentMapSizeSeven;
+	bool m_MapSevenLoaded;
 
 	CDemoRecorder m_DemoRecorder;
 	CRegister m_Register;
 	CMapChecker m_MapChecker;
+	char m_aRegisterServerInfo[32 * 1024];
 
 	CServer();
 
@@ -149,6 +161,7 @@ public:
 	void Kick(int ClientID, const char *pReason);
 
 	void DemoRecorder_HandleAutoStart();
+	void UpdateRegisterServerInfo();
 
 	//int Tick()
 	int64 TickStartTime(int Tick);
@@ -169,8 +182,10 @@ public:
 
 	void DoSnapshot();
 
-	static int NewClientCallback(int ClientID, void *pUser);
+	static int NewClientCallback(int ClientID, void *pUser, bool Sixup);
 	static int DelClientCallback(int ClientID, const char *pReason, void *pUser);
+
+	bool IsSixup(int ClientID) const { return ClientID >= 0 && ClientID < MAX_CLIENTS && m_aClients[ClientID].m_Sixup; }
 
 	void SendMap(int ClientID);
 	void SendConnectionReady(int ClientID);
@@ -194,7 +209,7 @@ public:
 	char *GetMapName();
 	int LoadMap(const char *pMapName);
 
-	void InitRegister(CNetServer *pNetServer, IEngineMasterServer *pMasterServer, IConsole *pConsole);
+	void InitRegister(class IEngine *pEngine, class IConsole *pConsole);
 	int Run();
 
 	static void ConKick(IConsole::IResult *pResult, void *pUser);

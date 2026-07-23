@@ -2,6 +2,7 @@
 #include <game/generated/server_data.h>
 #include <game/server/gamecontext.h>
 #include <game/server/player.h>
+#include <game/server/sixup_snap.h>
 
 #include "character.h"
 #include "health_shot.h"
@@ -33,16 +34,17 @@ void CHealthShot::Reset()
 
 void CHealthShot::Snap(int SnappingClient)
 {
-	(void)SnappingClient;
+	bool Sixup = SnappingClient >= 0 && Server()->IsSixup(SnappingClient);
 	CNetObj_Pickup *pPickup = static_cast<CNetObj_Pickup *>(
-		Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_ID, sizeof(CNetObj_Pickup)));
+		Server()->SnapNewItem(NETOBJTYPE_PICKUP, m_ID, PickupSnapSize(Sixup)));
 	if(!pPickup)
 		return;
 
 	pPickup->m_X = round_to_int(m_CurrentPos.x);
 	pPickup->m_Y = round_to_int(m_CurrentPos.y);
 	pPickup->m_Type = POWERUP_HEALTH;
-	pPickup->m_Subtype = 0;
+	if(!Sixup)
+		pPickup->m_Subtype = 0;
 }
 
 void CHealthShot::Hit()
