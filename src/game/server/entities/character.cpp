@@ -530,15 +530,6 @@ void CCharacter::FireWeapon()
 	if(!WillFire)
 		return;
 
-	// The Jet airstrike is armed after the fire decision but before the ammo
-	// test. FireWeapon then returns before the ordinary Ninja branch.
-	if(m_BattlefieldVehicleType == BATTLEFIELD_VEHICLE_JET &&
-		m_pPlayer->IsSniper() && m_AirstrikeCooldown == 0)
-	{
-		m_AirstrikeBurstTimer = Server()->TickSpeed();
-		m_AirstrikeCooldown = Server()->TickSpeed()*5;
-	}
-
 	if(m_InAntiAircraftCannon)
 	{
 		float BaseAngle = GetAngle(Direction);
@@ -652,6 +643,8 @@ void CCharacter::FireWeapon()
 				char aBuf[128];
 				str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Mine placed %i/3!.", m_pPlayer->GetCID()), m_NumMines);
 				GameServer()->SendChatTarget(m_pPlayer->GetCID(), aBuf);
+				GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_MINE,
+					"Mine tip: max 3 active. Restock at supply stations.");
 			}
 			else if(m_pPlayer->IsMedic())
 			{
@@ -667,6 +660,8 @@ void CCharacter::FireWeapon()
 				char aBuf[128];
 				str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Ammo-Pack placed %i/2!.", m_pPlayer->GetCID()), m_NumAmmoPacks);
 				GameServer()->SendChatTarget(m_pPlayer->GetCID(), aBuf);
+				GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_AMMO_PACK,
+					"Ammo-Pack tip: max 2 deployed. Allies (and you) can restock from them.");
 			}
 
 		} break;
@@ -860,6 +855,8 @@ void CCharacter::FireWeapon()
 				str_format(aBuf, sizeof(aBuf),
 					GameServer()->Localize("C4 placed %i/3!. Press right-mouse to explode!", m_pPlayer->GetCID()), m_NumC4);
 				GameServer()->SendChatTarget(m_pPlayer->GetCID(), aBuf);
+				GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_C4,
+					"C4 tip: max 3. Right-mouse detonates. Restock grenades at supply.");
 				GameServer()->CreateSound(m_Pos, SOUND_GRENADE_FIRE);
 			}
 			else if(m_pPlayer->IsEngineer())
@@ -999,7 +996,8 @@ void CCharacter::HandleTicks()
 
 void CCharacter::HandleTiles()
 {
-	if(m_pPlayer->IsSniper())
+	if(m_pPlayer->IsSniper() && (m_Invisible ||
+		(m_ActiveWeapon == WEAPON_HAMMER && m_InvisibilityPower < Server()->TickSpeed()*5)))
 	{
 		char aBuf[64];
 		str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Invisiblepower: %i | %i", m_pPlayer->GetCID()),
@@ -1591,6 +1589,18 @@ void CCharacter::SelectBattlefieldClass(int Class)
 			Server()->ClientName(m_pPlayer->GetCID()));
 		Server()->SetClientName(m_pPlayer->GetCID(), aName);
 		GameServer()->CreatePlayerSpawn(m_Pos);
+		if(Class == CPlayer::BATTLEFIELD_CLASS_SOLDIER)
+			GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_CLASS_HINT,
+				"Soldier tip: Hammer deploys ammo packs; Grenade places C4; emote or /e throws a hand grenade.");
+		else if(Class == CPlayer::BATTLEFIELD_CLASS_ENGINEER)
+			GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_CLASS_HINT,
+				"Engineer tip: Hammer places mines; Gun repairs vehicles and hacks enemy doors.");
+		else if(Class == CPlayer::BATTLEFIELD_CLASS_MEDIC)
+			GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_CLASS_HINT,
+				"Medic tip: Hammer fires heal shots; you slowly regenerate and can heal teammates.");
+		else if(Class == CPlayer::BATTLEFIELD_CLASS_SNIPER)
+			GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_CLASS_HINT,
+				"Sniper tip: Hammer toggles invisibility; switch to Hammer to regenerate invis power.");
 	}
 	GameServer()->SendChatTarget(m_pPlayer->GetCID(), aBuf);
 	m_BattlefieldTileCooldown = Server()->TickSpeed();
@@ -1736,6 +1746,8 @@ void CCharacter::HandleAntiAircraftCannon(int Tile, int TileIndex)
 		m_AntiAircraftStationPos = GameServer()->Collision()->GetPos(TileIndex);
 		m_AntiAircraftBurstCount = 0;
 		GameServer()->SendChatTarget(m_pPlayer->GetCID(), "entred Anti-Aircraft Cannon.");
+		GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_ANTIAIR,
+			"Anti-Air tip: hold fire for bursts; leave with Shift or /e.");
 		GameServer()->CreatePlayerSpawn(m_Pos);
 	}
 
@@ -1806,6 +1818,8 @@ void CCharacter::HandleAntiTankCannon(int Tile, int TileIndex)
 		m_pPlayer->BeginBattlefieldAimCamera();
 		GameServer()->SendChatTarget(m_pPlayer->GetCID(),
 			"entred Anti-Tank-Cannon, scroll to switch aim-type.");
+		GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_ANTITANK,
+			"Anti-Tank tip: mouse wheel switches aim control / manual control. Exit: Shift or /e.");
 		GameServer()->CreatePlayerSpawn(m_Pos);
 	}
 
@@ -2156,6 +2170,8 @@ bool CCharacter::EnterBattlefieldVehicle(CBattle *pVehicle, int Type, int Health
 	m_Core.m_HookState = HOOK_RETRACTED;
 	m_Core.m_HookedPlayer = -1;
 	m_Core.m_TriggeredEvents = 0;
+	GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_VEHICLE,
+		"Vehicle tip: press Shift or type /e to exit.");
 	return true;
 }
 
@@ -2196,6 +2212,8 @@ bool CCharacter::EnterBattlefieldPassenger(CCharacter *pDriver)
 		pDriver->m_aWeapons[WEAPON_SHOTGUN].m_Ammo = 10;
 	else
 		m_aWeapons[WEAPON_GUN].m_Ammo = 10;
+	GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_VEHICLE,
+		"Vehicle tip: press Shift or type /e to exit.");
 	return true;
 }
 
@@ -2267,8 +2285,8 @@ void CCharacter::DetachBattlefieldVehicle(CBattle *pVehicle)
 
 vec2 CCharacter::GetBattlefieldVehicleAim() const
 {
-	vec2 Aim((float)m_LatestInput.m_TargetX, (float)m_LatestInput.m_TargetY);
-	return normalize(Aim);
+	return SafeNormalize(vec2((float)m_LatestInput.m_TargetX,
+		(float)m_LatestInput.m_TargetY));
 }
 
 vec2 CCharacter::GetSmokeLauncherAim() const
@@ -2366,7 +2384,6 @@ void CCharacter::PrepareBattlefieldVehicleWeaponState()
 		m_aWeapons[ForcedWeapon].m_Ammo = 10;
 		m_ReloadTimer = Server()->TickSpeed()*5;
 		GameServer()->CreateSound(m_Pos, SOUND_WEAPON_NOAMMO);
-		GameServer()->SendBroadcast("overflow!", m_pPlayer->GetCID());
 	}
 }
 
@@ -2726,7 +2743,6 @@ void CCharacter::Car(vec2 &Vel, vec2 &Pos, float &MaxSpeed, bool &FirePrimary)
 	}
 	if(m_BattlefieldVehicleAmmo == 0)
 	{
-		GameServer()->SendBroadcast("overflow!", m_pPlayer->GetCID());
 		m_BattlefieldVehicleOverheat = round_to_int(Server()->TickSpeed()*6.5f);
 		m_BattlefieldVehicleAmmo = 10;
 	}
@@ -2766,18 +2782,32 @@ void CCharacter::JetFly(vec2 Aim, vec2 &Vel, vec2 &Pos, float &MaxSpeed, bool &F
 {
 	FirePrimary = false;
 	UnsafeJetLanding = false;
-	if(m_AirstrikeBurstTimer > 0)
-		m_AirstrikeBurstTimer--;
-	if(m_AirstrikeCooldown > 0)
-		m_AirstrikeCooldown--;
+	Aim = SafeNormalize(Aim);
+
 	if(m_AirstrikeShotCooldown > 0)
 		m_AirstrikeShotCooldown--;
-	if(m_BattlefieldVehicleMoveSound > 0)
-		m_BattlefieldVehicleMoveSound--;
-	if(m_BattlefieldVehicleWeaponCooldown > 0)
-		m_BattlefieldVehicleWeaponCooldown--;
+
+	if(m_AirstrikeBurstTimer > 0)
+		m_AirstrikeBurstTimer--;
+
+	if(m_AirstrikeCooldown > 0)
+		m_AirstrikeCooldown--;
+
+	if(m_AirstrikeCooldown == 0 && (m_Input.m_Fire&1))
+	{
+		m_AirstrikeBurstTimer = Server()->TickSpeed();
+		m_AirstrikeCooldown = Server()->TickSpeed()*5;
+	}
+
 	if(m_AirstrikeBurstTimer > 0)
 		FireAirstrike(Aim);
+
+	if(m_BattlefieldVehicleMoveSound > 0)
+		m_BattlefieldVehicleMoveSound--;
+
+	if(m_BattlefieldVehicleWeaponCooldown > 0)
+		m_BattlefieldVehicleWeaponCooldown--;
+
 	if(m_JetFeedbackCooldown > 0)
 		m_JetFeedbackCooldown--;
 
@@ -3239,6 +3269,8 @@ void CCharacter::Check(int Checkpoint)
 	};
 	GameServer()->SendBroadcast(s_apGauge[Gauge+5], m_pPlayer->GetCID());
 	m_BroadcastClearTimer = 20;
+	GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_CHECKPOINT,
+		"Checkpoint tip: stand here to capture A/B/C. Your team gets score; enemies get a warning chat.");
 
 	if(State > -401 && State < 401)
 	{

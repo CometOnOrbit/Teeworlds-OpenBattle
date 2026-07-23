@@ -258,11 +258,11 @@ else()
 endif()
 
 ########################################################################
-# COPY MAPS
+# COPY DATA
 ########################################################################
 
-if(EXISTS "${PROJECT_SOURCE_DIR}/maps")
-  file(COPY maps DESTINATION .)
+if(EXISTS "${PROJECT_SOURCE_DIR}/data")
+  file(COPY data DESTINATION .)
 endif()
 
 ########################################################################
@@ -429,6 +429,8 @@ list(APPEND TARGETS_OWN engine-shared game-shared)
 ########################################################################
 
 set_glob(ENGINE_SERVER GLOB src/engine/server
+  ipcountry.cpp
+  ipcountry.h
   localization.cpp
   localization.h
   register.cpp
@@ -589,10 +591,9 @@ add_custom_target(everything DEPENDS ${TARGETS_OWN})
 ########################################################################
 
 if(NOT DEV)
-  install(DIRECTORY maps DESTINATION share/${PROJECT_NAME} COMPONENT maps)
-  install(DIRECTORY data/server DESTINATION share/${PROJECT_NAME}/data COMPONENT server)
+  install(DIRECTORY data DESTINATION share/${PROJECT_NAME} COMPONENT data)
   install(TARGETS ${TARGET_SERVER} DESTINATION bin COMPONENT server)
-  install(FILES license.txt readme.txt storage.cfg DESTINATION share/${PROJECT_NAME} COMPONENT maps)
+  install(FILES license.txt readme.txt storage.cfg DESTINATION share/${PROJECT_NAME} COMPONENT data)
 endif()
 
 ########################################################################

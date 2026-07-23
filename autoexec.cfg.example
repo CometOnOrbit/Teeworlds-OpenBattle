@@ -1,0 +1,16 @@
+sv_name "My OpenBattle Server"
+sv_port 8303
+sv_rcon_password changeme
+sv_register 1
+sv_max_clients 16
+sv_map "Battlefield1.5"
+
+sv_motd "My motd"
+
+#add some votes
+add_vote "map Battlefield1.5" "sv_map Battlefield1.5"
+add_vote "map Battlefield_Jungle" "sv_map Battlefield_Jungle"
+add_vote "map Seabattle0.5" "sv_map Seabattle0.5"
+
+sv_scorelimit 500
+sv_timelimit 30

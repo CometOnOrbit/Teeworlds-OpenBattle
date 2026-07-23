@@ -38,3 +38,6 @@ cmake_install.cmake
 install_manifest.txt
 
 /build
+# IPinfo offline DB (download via scripts/download_ipinfo.sh)
+data/server/ipinfo/country.csv
+data/server/ipinfo/*.csv.gz

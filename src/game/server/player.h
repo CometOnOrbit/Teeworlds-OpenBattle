@@ -30,6 +30,21 @@ public:
 		BATTLEFIELD_WATER_WEAPON_THROWING_STAR,
 	};
 
+	// Session-only UX tip flags (once per connect).
+	enum
+	{
+		TIP_WELCOME = 1<<0,
+		TIP_CLASS_REMINDER = 1<<1,
+		TIP_CLASS_HINT = 1<<2,
+		TIP_VEHICLE = 1<<3,
+		TIP_ANTITANK = 1<<4,
+		TIP_ANTIAIR = 1<<5,
+		TIP_CHECKPOINT = 1<<6,
+		TIP_MINE = 1<<7,
+		TIP_C4 = 1<<8,
+		TIP_AMMO_PACK = 1<<9,
+	};
+
 	CPlayer(CGameContext *pGameServer, int ClientID, int Team);
 	~CPlayer();
 
@@ -115,6 +130,9 @@ public:
 	int m_LastActionTick;
 	int m_TeamChangeTick;
 	char m_aLanguage[16];
+	int m_TipFlags;
+	int m_EnterTick;
+	bool TryConsumeTip(int Flag);
 	struct
 	{
 		int m_TargetX;

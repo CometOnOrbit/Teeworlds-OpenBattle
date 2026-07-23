@@ -17,11 +17,11 @@ void CLocalization::LoadLocalizations(void *pUser)
 {
 	CLocalization *pThis = (CLocalization *)pUser;
 
-    const char *pIndex = "./data/server/languages/index.json";
+    const char *pIndex = "./data/languages/index.json";
     IOHANDLE File = pThis->m_pStorage->OpenFile(pIndex, IOFLAG_READ, IStorage::TYPE_ALL);
 	if(!File)
 	{
-		dbg_msg("Localization", "can't open ./server_lang/index.json");
+		dbg_msg("Localization", "can't open ./data/languages/index.json");
 		return;
 	}
 
@@ -63,7 +63,7 @@ void CLocalization::LoadLocalizations(void *pUser)
 bool CLocalization::LoadLanguage(const char *pFile)
 {
     char aFilePath[64];
-    str_format(aFilePath, sizeof(aFilePath), "./data/server/languages/%s.json", pFile);
+    str_format(aFilePath, sizeof(aFilePath), "./data/languages/%s.json", pFile);
     IOHANDLE File = m_pStorage->OpenFile(aFilePath, IOFLAG_READ, IStorage::TYPE_ALL);
 	if(!File)
 		return false;
@@ -255,6 +255,7 @@ const char *CLocalization::GetLanguageCode(int Country)
 		case 156: //People’s Republic of China
 			return "zh-cn";
 		/* zh-hk - Chinese (Traditional) **********************************/
+		case 158: //Taiwan
 		case 344: //Hong Kong
 		case 446: //Macau
 			return "zh-hk";
@@ -264,6 +265,123 @@ const char *CLocalization::GetLanguageCode(int Country)
 		default:
 			return "en";
 	}
+}
+
+static int IsoAlpha2ToCountryNum(const char *pIso)
+{
+	if(!pIso || str_length(pIso) < 2)
+		return -1;
+	char a[3];
+	a[0] = str_uppercase(pIso[0]);
+	a[1] = str_uppercase(pIso[1]);
+	a[2] = 0;
+
+	// Same countries as GetLanguageCode (ISO 3166-1 alpha-2 → numeric)
+	if(!str_comp(a, "DZ")) return 12;
+	if(!str_comp(a, "BH")) return 48;
+	if(!str_comp(a, "DJ")) return 262;
+	if(!str_comp(a, "EG")) return 818;
+	if(!str_comp(a, "IQ")) return 368;
+	if(!str_comp(a, "JO")) return 400;
+	if(!str_comp(a, "KW")) return 414;
+	if(!str_comp(a, "LB")) return 422;
+	if(!str_comp(a, "LY")) return 434;
+	if(!str_comp(a, "MR")) return 478;
+	if(!str_comp(a, "MA")) return 504;
+	if(!str_comp(a, "OM")) return 512;
+	if(!str_comp(a, "PS")) return 275;
+	if(!str_comp(a, "QA")) return 634;
+	if(!str_comp(a, "SA")) return 682;
+	if(!str_comp(a, "SO")) return 706;
+	if(!str_comp(a, "SD")) return 729;
+	if(!str_comp(a, "SY")) return 760;
+	if(!str_comp(a, "TN")) return 788;
+	if(!str_comp(a, "AE")) return 784;
+	if(!str_comp(a, "YE")) return 887;
+	if(!str_comp(a, "BG")) return 100;
+	if(!str_comp(a, "BA")) return 70;
+	if(!str_comp(a, "CZ")) return 203;
+	if(!str_comp(a, "AT")) return 40;
+	if(!str_comp(a, "DE")) return 276;
+	if(!str_comp(a, "LI")) return 438;
+	if(!str_comp(a, "CH")) return 756;
+	if(!str_comp(a, "GR")) return 300;
+	if(!str_comp(a, "CY")) return 196;
+	if(!str_comp(a, "AR")) return 32;
+	if(!str_comp(a, "BO")) return 68;
+	if(!str_comp(a, "CL")) return 152;
+	if(!str_comp(a, "CO")) return 170;
+	if(!str_comp(a, "CR")) return 188;
+	if(!str_comp(a, "CU")) return 192;
+	if(!str_comp(a, "DO")) return 214;
+	if(!str_comp(a, "EC")) return 218;
+	if(!str_comp(a, "SV")) return 222;
+	if(!str_comp(a, "GQ")) return 226;
+	if(!str_comp(a, "GT")) return 320;
+	if(!str_comp(a, "HN")) return 340;
+	if(!str_comp(a, "MX")) return 484;
+	if(!str_comp(a, "NI")) return 558;
+	if(!str_comp(a, "PA")) return 591;
+	if(!str_comp(a, "PY")) return 600;
+	if(!str_comp(a, "PE")) return 604;
+	if(!str_comp(a, "PR")) return 630;
+	if(!str_comp(a, "ES")) return 724;
+	if(!str_comp(a, "UY")) return 858;
+	if(!str_comp(a, "VE")) return 862;
+	if(!str_comp(a, "IR")) return 364;
+	if(!str_comp(a, "AF")) return 4;
+	if(!str_comp(a, "BJ")) return 204;
+	if(!str_comp(a, "BF")) return 854;
+	if(!str_comp(a, "CG")) return 178;
+	if(!str_comp(a, "CI")) return 384;
+	if(!str_comp(a, "GA")) return 266;
+	if(!str_comp(a, "GN")) return 324;
+	if(!str_comp(a, "ML")) return 466;
+	if(!str_comp(a, "NE")) return 562;
+	if(!str_comp(a, "SN")) return 686;
+	if(!str_comp(a, "TG")) return 768;
+	if(!str_comp(a, "FR")) return 250;
+	if(!str_comp(a, "MC")) return 492;
+	if(!str_comp(a, "HR")) return 191;
+	if(!str_comp(a, "HU")) return 348;
+	if(!str_comp(a, "IT")) return 380;
+	if(!str_comp(a, "JP")) return 392;
+	if(!str_comp(a, "VA")) return 336;
+	if(!str_comp(a, "AW")) return 533;
+	if(!str_comp(a, "CW")) return 531;
+	if(!str_comp(a, "SX")) return 534;
+	if(!str_comp(a, "NL")) return 528;
+	if(!str_comp(a, "SR")) return 740;
+	if(!str_comp(a, "BE")) return 56;
+	if(!str_comp(a, "PL")) return 616;
+	if(!str_comp(a, "AO")) return 24;
+	if(!str_comp(a, "BR")) return 76;
+	if(!str_comp(a, "CV")) return 132;
+	if(!str_comp(a, "MZ")) return 508;
+	if(!str_comp(a, "TL")) return 626;
+	if(!str_comp(a, "ST")) return 678;
+	if(!str_comp(a, "BY")) return 112;
+	if(!str_comp(a, "RU")) return 643;
+	if(!str_comp(a, "KZ")) return 398;
+	if(!str_comp(a, "SK")) return 703;
+	if(!str_comp(a, "RS")) return 688;
+	if(!str_comp(a, "PH")) return 608;
+	if(!str_comp(a, "AZ")) return 31;
+	if(!str_comp(a, "TR")) return 792;
+	if(!str_comp(a, "UA")) return 804;
+	if(!str_comp(a, "CN")) return 156;
+	if(!str_comp(a, "TW")) return 158;
+	if(!str_comp(a, "HK")) return 344;
+	if(!str_comp(a, "MO")) return 446;
+	if(!str_comp(a, "GB")) return 826;
+	if(!str_comp(a, "UK")) return 826;
+	if(!str_comp(a, "US")) return 840;
+	return -1;
+}
+
+const char *CLocalization::GetLanguageCodeFromISO(const char *pCountryIso)
+{
+	return GetLanguageCode(IsoAlpha2ToCountryNum(pCountryIso));
 }
 
 const char *CLocalization::Localize(const char *pLanguage, const char *pText)

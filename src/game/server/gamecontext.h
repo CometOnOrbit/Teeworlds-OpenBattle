@@ -15,6 +15,8 @@
 #include "gameworld.h"
 #include "player.h"
 
+#include <engine/server/ipcountry.h>
+
 class ILocalization;
 
 /*
@@ -43,6 +45,7 @@ class CGameContext : public IGameServer
 	IServer *m_pServer;
 	class IConsole *m_pConsole;
 	class ILocalization *m_pLocalization;
+	CIpCountryDb m_IpCountry;
 	CLayers m_Layers;
 	CCollision m_Collision;
 	CNetObjHandler m_NetObjHandler;
@@ -75,6 +78,9 @@ public:
 	CCollision *Collision() { return &m_Collision; }
 	CTuningParams *Tuning() { return &m_Tuning; }
 	const char *Localize(const char *pText, int ClientID);
+	bool HandleChatCommand(int ClientID, const char *pMessage);
+	void SendWelcomeTutorial(int ClientID);
+	void TrySendTip(int ClientID, int TipFlag, const char *pText);
 
 	CGameContext();
 	~CGameContext();

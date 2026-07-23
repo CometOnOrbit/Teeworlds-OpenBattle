@@ -2,7 +2,7 @@
     "translation": [
         {
             "key": "%s is %s and got 5 sec God-Mode!",
-            "value": "%s 处于 %s 并获得 5 秒无敌！"
+            "value": "%s %s，并获得 5 秒无敌！"
         },
         {
             "key": "%s-Team (%s) captured Checkpoint %c!",
@@ -49,16 +49,44 @@
             "value": "'%s' 加入了 %s"
         },
         {
+            "key": "/help [class|controls|vehicles|objectives]",
+            "value": "/help [class|controls|vehicles|objectives]"
+        },
+        {
+            "key": "/help class | controls | vehicles | objectives",
+            "value": "/help class | controls | vehicles | objectives"
+        },
+        {
+            "key": "/info  /cmds  /e  /language <code>",
+            "value": "/info  /cmds  /e  /language <代码>"
+        },
+        {
             "key": "Ammo-Pack now aviable %i/2!.",
-            "value": "弹药包现可用 %i/2！"
+            "value": "弹药包可用数量：%i/2"
         },
         {
             "key": "Ammo-Pack placed %i/2!.",
-            "value": "弹药包已放置 %i/2！"
+            "value": "已放置弹药包 %i/2"
+        },
+        {
+            "key": "Ammo-Pack tip: max 2 deployed. Allies (and you) can restock from them.",
+            "value": "弹药包提示：最多同时放置 2 个，队友和你都可以从中补给。"
         },
         {
             "key": "Ammo: %i",
             "value": "弹药：%i"
+        },
+        {
+            "key": "Anti-Air tip: hold fire for bursts; leave with Shift or /e.",
+            "value": "防空炮提示：按住开火可连射，按 Shift 或输入 /e 离开。"
+        },
+        {
+            "key": "Anti-Tank tip: mouse wheel switches aim control / manual control. Exit: Shift or /e.",
+            "value": "反坦克炮提示：滚轮切换瞄准控制/手动控制，按 Shift 或输入 /e 离开。"
+        },
+        {
+            "key": "Anti-Tank: mouse wheel switches aim / manual mode.",
+            "value": "反坦克炮：滚轮切换瞄准/手动模式。"
         },
         {
             "key": "Blue",
@@ -66,15 +94,31 @@
         },
         {
             "key": "C4 placed %i/3!. Press right-mouse to explode!",
-            "value": "C4 已放置 %i/3！按鼠标右键引爆！"
+            "value": "已放置 C4 %i/3！按鼠标右键引爆！"
+        },
+        {
+            "key": "C4 tip: max 3. Right-mouse detonates. Restock grenades at supply.",
+            "value": "C4 提示：最多 3 枚，鼠标右键引爆，可在补给站补充榴弹。"
         },
         {
             "key": "Can't place more C4!",
-            "value": "无法放置更多 C4！"
+            "value": "无法再放置更多 C4！"
+        },
+        {
+            "key": "Capture the enemy flag and return it to your base for big team score.",
+            "value": "夺取敌方旗帜并带回己方基地，可获得大量队伍分数。"
+        },
+        {
+            "key": "Checkpoint tip: stand here to capture A/B/C. Your team gets score; enemies get a warning chat.",
+            "value": "检查点提示：站在此处可占领 A/B/C。己方得分时，敌方会收到警告。"
         },
         {
             "key": "Choose a class first!",
             "value": "请先选择兵种！"
+        },
+        {
+            "key": "Classes (step on map tiles):",
+            "value": "兵种（踩地图上的兵种地砖选择）："
         },
         {
             "key": "Current language: %s",
@@ -89,8 +133,20 @@
             "value": "拆除地雷：%i | 70"
         },
         {
+            "key": "Emote or /e (Soldier): throw hand grenade. Space: fire water weapon.",
+            "value": "表情键或 /e（士兵）：投掷手雷。空格：发射水下武器。"
+        },
+        {
+            "key": "Enemy vehicles need the matching key — even empty ones cannot be seized. Engineers can only damage occupied enemy vehicles. Exit: Shift or /e.",
+            "value": "敌方载具需要对应钥匙，空车也无法夺取。工程师只能攻击有人驾驶的敌方载具。下车：Shift 或 /e。"
+        },
+        {
             "key": "Engineer",
             "value": "工程师"
+        },
+        {
+            "key": "Engineer tip: Hammer places mines; Gun repairs vehicles and hacks enemy doors.",
+            "value": "工程师提示：锤子放置地雷；手枪可修理己方载具，并破解敌方大门。"
         },
         {
             "key": "Force: %i ; Ammo: %i",
@@ -98,7 +154,7 @@
         },
         {
             "key": "GODLIKE",
-            "value": "神一般"
+            "value": "超神"
         },
         {
             "key": "Grenade lost signale!",
@@ -110,11 +166,11 @@
         },
         {
             "key": "Hand-Grenade fired, get an ammopack for new one!.",
-            "value": "手雷已投出，拾取弹药包可补充！"
+            "value": "手雷已投出，拾取弹药包可再获得一枚！"
         },
         {
             "key": "Health-Kit now aviable %i/1!.",
-            "value": "医疗包现可用 %i/1！"
+            "value": "医疗包可用数量：%i/1"
         },
         {
             "key": "INSANE",
@@ -157,12 +213,24 @@
             "value": "医疗兵"
         },
         {
+            "key": "Medic tip: Hammer fires heal shots; you slowly regenerate and can heal teammates.",
+            "value": "医疗兵提示：锤子发射治疗弹；自身缓慢回血，也可治疗队友。"
+        },
+        {
+            "key": "Medic: heal shots. Sniper: rifle + stealth (Hammer toggles invis).",
+            "value": "医疗兵：治疗弹。狙击手：步枪 + 隐身（锤子切换隐身）。"
+        },
+        {
             "key": "Mine placed %i/3!.",
-            "value": "地雷已放置 %i/3！"
+            "value": "已放置地雷 %i/3"
+        },
+        {
+            "key": "Mine tip: max 3 active. Restock at supply stations.",
+            "value": "地雷提示：最多同时存在 3 枚，可在补给站补充。"
         },
         {
             "key": "Mines now aviable: %i/3!.",
-            "value": "地雷现可用：%i/3！"
+            "value": "地雷可用数量：%i/3"
         },
         {
             "key": "No reason given",
@@ -174,19 +242,23 @@
         },
         {
             "key": "OpenBattle - open-source version by Comet",
-            "value": "OpenBattle - Comet 开源版本"
+            "value": "OpenBattle — Comet 开源版"
         },
         {
             "key": "OpenBattle by Comet",
-            "value": "OpenBattle 作者：Comet"
+            "value": "OpenBattle，作者 Comet"
+        },
+        {
+            "key": "OpenBattle: team CTF + checkpoints. Pick a class tile first.",
+            "value": "OpenBattle：团队夺旗 + 检查点。请先踩兵种地砖选择兵种。"
         },
         {
             "key": "Original mod by FuN~EleFant.",
-            "value": "原模组作者：FuN~EleFant。"
+            "value": "原版模组作者：FuN~EleFant。"
         },
         {
             "key": "Press shift or write /e to get out of the vehicles.",
-            "value": "按 Shift 或输入 /e 离开载具。"
+            "value": "按 Shift 或输入 /e 可离开载具。"
         },
         {
             "key": "Red",
@@ -201,12 +273,32 @@
             "value": "服务器不允许投票将玩家移至旁观"
         },
         {
+            "key": "Shift or /e exits vehicles. Emote or /e throws a hand grenade (Soldier).",
+            "value": "Shift 或 /e 可离开载具。表情键或 /e 可投掷手雷（士兵）。"
+        },
+        {
+            "key": "Shift or /e: leave vehicle / cannon / fire smoke.",
+            "value": "Shift 或 /e：离开载具/炮台，或发射烟雾。"
+        },
+        {
             "key": "Sniper",
             "value": "狙击手"
         },
         {
+            "key": "Sniper tip: Hammer toggles invisibility; switch to Hammer to regenerate invis power.",
+            "value": "狙击手提示：锤子切换隐身；切回锤子可恢复隐身能量。"
+        },
+        {
             "key": "Soldier",
             "value": "士兵"
+        },
+        {
+            "key": "Soldier tip: Hammer deploys ammo packs; Grenade places C4; emote or /e throws a hand grenade.",
+            "value": "士兵提示：锤子放置弹药包；榴弹放置 C4；表情键或 /e 投掷手雷。"
+        },
+        {
+            "key": "Soldier: C4 + ammo packs + hand grenade. Engineer: mines, repair, hack doors.",
+            "value": "士兵：C4、弹药包、手雷。工程师：地雷、修车、破解敌门。"
         },
         {
             "key": "Spectators aren't allowed to start a vote.",
@@ -215,6 +307,14 @@
         {
             "key": "Speed: %i | 60, Health: %i | 10",
             "value": "速度：%i | 60，生命：%i | 10"
+        },
+        {
+            "key": "Stand on checkpoints A/B/C to capture them. Enemy doors: Engineer can hack.",
+            "value": "站在检查点 A/B/C 上可占领。敌方大门可由工程师破解。"
+        },
+        {
+            "key": "Step on a class tile (Soldier/Engineer/Medic/Sniper) before fighting.",
+            "value": "开战前请先踩兵种地砖（士兵/工程师/医疗兵/狙击手）。"
         },
         {
             "key": "Switched Type to [aim control]",
@@ -238,11 +338,11 @@
         },
         {
             "key": "The %s flag was captured by '%s'",
-            "value": "%s 旗被 '%s' 夺下"
+            "value": "%s旗被 '%s' 夺下"
         },
         {
             "key": "The %s flag was captured by '%s' (%d.%s%d seconds)",
-            "value": "%s 旗被 '%s' 夺下（%d.%s%d 秒）"
+            "value": "%s旗被 '%s' 夺下（%d.%s%d 秒）"
         },
         {
             "key": "This Mod based on the Idea of Battlefield.",
@@ -258,11 +358,31 @@
         },
         {
             "key": "To far away from the station! Go back with your cursor!",
-            "value": "离站点太远！请把光标移回去！"
+            "value": "离炮台太远了！请把光标移回去！"
+        },
+        {
+            "key": "Type /cmds for the full command list.",
+            "value": "输入 /cmds 查看全部命令。"
+        },
+        {
+            "key": "Type /help for gameplay help.",
+            "value": "输入 /help 查看玩法说明。"
+        },
+        {
+            "key": "Type /help to learn classes, vehicles, and objectives.",
+            "value": "输入 /help 了解兵种、载具与目标。"
+        },
+        {
+            "key": "Unknown help topic. Try: class, controls, vehicles, objectives.",
+            "value": "未知帮助主题。可试：class、controls、vehicles、objectives。"
         },
         {
             "key": "Usage: /language zh-cn",
             "value": "用法：/language zh-cn"
+        },
+        {
+            "key": "Vehicle tip: press Shift or type /e to exit.",
+            "value": "载具提示：按 Shift 或输入 /e 下车。"
         },
         {
             "key": "Vehicle-Health: %i | %i",
@@ -289,16 +409,24 @@
             "value": "请等待当前投票结束后再发起新投票。"
         },
         {
+            "key": "Walk into a team vehicle to board. Heli/Tank can carry a passenger.",
+            "value": "走进己方载具即可上车。直升机/坦克可搭载一名乘客。"
+        },
+        {
             "key": "Water-Weapon = Arrows. Only usable in water. Press Spacebar to fire it.",
-            "value": "水下武器 = 箭矢。仅在水中可用。按空格发射。"
+            "value": "水下武器 = 箭矢。仅在水中可用，按空格发射。"
         },
         {
             "key": "Water-Weapon = Harpoon. Only usable in water. Press Spacebar to fire it.",
-            "value": "水下武器 = 鱼叉。仅在水中可用。按空格发射。"
+            "value": "水下武器 = 鱼叉。仅在水中可用，按空格发射。"
         },
         {
             "key": "Water-Weapon = Throwing-Star. Only usable in water. Press Spacebar to fire it.",
-            "value": "水下武器 = 飞镖。仅在水中可用。按空格发射。"
+            "value": "水下武器 = 飞镖。仅在水中可用，按空格发射。"
+        },
+        {
+            "key": "Welcome to OpenBattle — capture the flag and hold checkpoints A/B/C.",
+            "value": "欢迎来到 OpenBattle — 夺旗并占领检查点 A/B/C。"
         },
         {
             "key": "You are already %s.",
@@ -306,7 +434,7 @@
         },
         {
             "key": "You are no longer invisible! Switch to Hammer to regenerate your Invispower.",
-            "value": "你不再隐身！切换到锤子以恢复隐身能量。"
+            "value": "你不再隐身！切换到锤子可恢复隐身能量。"
         },
         {
             "key": "You are no longer invisible.",
@@ -318,11 +446,11 @@
         },
         {
             "key": "You are now invisible.",
-            "value": "你现在隐身了。"
+            "value": "你现在处于隐身状态。"
         },
         {
             "key": "You can only give all 10 seconds ammo for yourself!",
-            "value": "你只能每 10 秒给自己补充一次弹药！"
+            "value": "你只能每 10 秒为自己补充一次弹药！"
         },
         {
             "key": "You can't kick admins",
@@ -346,11 +474,15 @@
         },
         {
             "key": "You have already this Water-Weapon.",
-            "value": "你已拥有该水下武器。"
+            "value": "你已经拥有该水下武器。"
         },
         {
             "key": "You must wait %d seconds before making another vote",
             "value": "你必须再等待 %d 秒才能再次投票"
+        },
+        {
+            "key": "You still have no class. Step on a class tile (Soldier/Engineer/Medic/Sniper).",
+            "value": "你还没有选择兵种。请踩兵种地砖（士兵/工程师/医疗兵/狙击手）。"
         },
         {
             "key": "You were moved to %s due to team balancing",
@@ -382,7 +514,7 @@
         },
         {
             "key": "an ICE COLD KILLER",
-            "value": "冰冷杀手"
+            "value": "冷酷杀手"
         },
         {
             "key": "blue",
@@ -394,11 +526,11 @@
         },
         {
             "key": "entred Anti-Aircraft Cannon.",
-            "value": "进入防空炮。"
+            "value": "已进入防空炮。"
         },
         {
             "key": "entred Anti-Tank-Cannon, scroll to switch aim-type.",
-            "value": "进入反坦克炮，滚轮切换瞄准模式。"
+            "value": "已进入反坦克炮，滚轮可切换瞄准模式。"
         },
         {
             "key": "game",
@@ -435,6 +567,10 @@
         {
             "key": "spectators",
             "value": "旁观者"
+        },
+        {
+            "key": "try /cmds",
+            "value": "试试 /cmds"
         },
         {
             "key": "write /help for Infos about the Game",

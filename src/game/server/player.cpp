@@ -31,6 +31,16 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_LastActionTick = Server()->Tick();
 	m_TeamChangeTick = Server()->Tick();
 	str_copy(m_aLanguage, "en", sizeof(m_aLanguage));
+	m_TipFlags = 0;
+	m_EnterTick = Server()->Tick();
+}
+
+bool CPlayer::TryConsumeTip(int Flag)
+{
+	if(m_TipFlags & Flag)
+		return false;
+	m_TipFlags |= Flag;
+	return true;
 }
 
 int CPlayer::GetBattlefieldClass() const
@@ -128,6 +138,15 @@ void CPlayer::Tick()
 
 	if(!m_pCharacter && m_DieTick+Server()->TickSpeed()*3 <= Server()->Tick())
 		m_Spawning = true;
+
+	if(g_Config.m_SvTutorial && m_Team != TEAM_SPECTATORS &&
+		!HasBattlefieldClass() &&
+		m_EnterTick + Server()->TickSpeed()*30 <= Server()->Tick() &&
+		TryConsumeTip(TIP_CLASS_REMINDER))
+	{
+		GameServer()->SendChatTarget(m_ClientID,
+			"You still have no class. Step on a class tile (Soldier/Engineer/Medic/Sniper).");
+	}
 
 	if(m_pCharacter)
 	{

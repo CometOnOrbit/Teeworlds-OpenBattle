@@ -49,6 +49,18 @@
             "value": "'%s' joined the %s"
         },
         {
+            "key": "/help [class|controls|vehicles|objectives]",
+            "value": "/help [class|controls|vehicles|objectives]"
+        },
+        {
+            "key": "/help class | controls | vehicles | objectives",
+            "value": "/help class | controls | vehicles | objectives"
+        },
+        {
+            "key": "/info  /cmds  /e  /language <code>",
+            "value": "/info  /cmds  /e  /language <code>"
+        },
+        {
             "key": "Ammo-Pack now aviable %i/2!.",
             "value": "Ammo-Pack now aviable %i/2!."
         },
@@ -57,8 +69,24 @@
             "value": "Ammo-Pack placed %i/2!."
         },
         {
+            "key": "Ammo-Pack tip: max 2 deployed. Allies (and you) can restock from them.",
+            "value": "Ammo-Pack tip: max 2 deployed. Allies (and you) can restock from them."
+        },
+        {
             "key": "Ammo: %i",
             "value": "Ammo: %i"
+        },
+        {
+            "key": "Anti-Air tip: hold fire for bursts; leave with Shift or /e.",
+            "value": "Anti-Air tip: hold fire for bursts; leave with Shift or /e."
+        },
+        {
+            "key": "Anti-Tank tip: mouse wheel switches aim control / manual control. Exit: Shift or /e.",
+            "value": "Anti-Tank tip: mouse wheel switches aim control / manual control. Exit: Shift or /e."
+        },
+        {
+            "key": "Anti-Tank: mouse wheel switches aim / manual mode.",
+            "value": "Anti-Tank: mouse wheel switches aim / manual mode."
         },
         {
             "key": "Blue",
@@ -69,12 +97,28 @@
             "value": "C4 placed %i/3!. Press right-mouse to explode!"
         },
         {
+            "key": "C4 tip: max 3. Right-mouse detonates. Restock grenades at supply.",
+            "value": "C4 tip: max 3. Right-mouse detonates. Restock grenades at supply."
+        },
+        {
             "key": "Can't place more C4!",
             "value": "Can't place more C4!"
         },
         {
+            "key": "Capture the enemy flag and return it to your base for big team score.",
+            "value": "Capture the enemy flag and return it to your base for big team score."
+        },
+        {
+            "key": "Checkpoint tip: stand here to capture A/B/C. Your team gets score; enemies get a warning chat.",
+            "value": "Checkpoint tip: stand here to capture A/B/C. Your team gets score; enemies get a warning chat."
+        },
+        {
             "key": "Choose a class first!",
             "value": "Choose a class first!"
+        },
+        {
+            "key": "Classes (step on map tiles):",
+            "value": "Classes (step on map tiles):"
         },
         {
             "key": "Current language: %s",
@@ -89,8 +133,20 @@
             "value": "Defuse Mine: %i | 70"
         },
         {
+            "key": "Emote or /e (Soldier): throw hand grenade. Space: fire water weapon.",
+            "value": "Emote or /e (Soldier): throw hand grenade. Space: fire water weapon."
+        },
+        {
+            "key": "Enemy vehicles need the matching key — even empty ones cannot be seized. Engineers can only damage occupied enemy vehicles. Exit: Shift or /e.",
+            "value": "Enemy vehicles need the matching key — even empty ones cannot be seized. Engineers can only damage occupied enemy vehicles. Exit: Shift or /e."
+        },
+        {
             "key": "Engineer",
             "value": "Engineer"
+        },
+        {
+            "key": "Engineer tip: Hammer places mines; Gun repairs vehicles and hacks enemy doors.",
+            "value": "Engineer tip: Hammer places mines; Gun repairs vehicles and hacks enemy doors."
         },
         {
             "key": "Force: %i ; Ammo: %i",
@@ -157,8 +213,20 @@
             "value": "Medic"
         },
         {
+            "key": "Medic tip: Hammer fires heal shots; you slowly regenerate and can heal teammates.",
+            "value": "Medic tip: Hammer fires heal shots; you slowly regenerate and can heal teammates."
+        },
+        {
+            "key": "Medic: heal shots. Sniper: rifle + stealth (Hammer toggles invis).",
+            "value": "Medic: heal shots. Sniper: rifle + stealth (Hammer toggles invis)."
+        },
+        {
             "key": "Mine placed %i/3!.",
             "value": "Mine placed %i/3!."
+        },
+        {
+            "key": "Mine tip: max 3 active. Restock at supply stations.",
+            "value": "Mine tip: max 3 active. Restock at supply stations."
         },
         {
             "key": "Mines now aviable: %i/3!.",
@@ -181,6 +249,10 @@
             "value": "OpenBattle by Comet"
         },
         {
+            "key": "OpenBattle: team CTF + checkpoints. Pick a class tile first.",
+            "value": "OpenBattle: team CTF + checkpoints. Pick a class tile first."
+        },
+        {
             "key": "Original mod by FuN~EleFant.",
             "value": "Original mod by FuN~EleFant."
         },
@@ -201,12 +273,32 @@
             "value": "Server does not allow voting to move players to spectators"
         },
         {
+            "key": "Shift or /e exits vehicles. Emote or /e throws a hand grenade (Soldier).",
+            "value": "Shift or /e exits vehicles. Emote or /e throws a hand grenade (Soldier)."
+        },
+        {
+            "key": "Shift or /e: leave vehicle / cannon / fire smoke.",
+            "value": "Shift or /e: leave vehicle / cannon / fire smoke."
+        },
+        {
             "key": "Sniper",
             "value": "Sniper"
         },
         {
+            "key": "Sniper tip: Hammer toggles invisibility; switch to Hammer to regenerate invis power.",
+            "value": "Sniper tip: Hammer toggles invisibility; switch to Hammer to regenerate invis power."
+        },
+        {
             "key": "Soldier",
             "value": "Soldier"
+        },
+        {
+            "key": "Soldier tip: Hammer deploys ammo packs; Grenade places C4; emote or /e throws a hand grenade.",
+            "value": "Soldier tip: Hammer deploys ammo packs; Grenade places C4; emote or /e throws a hand grenade."
+        },
+        {
+            "key": "Soldier: C4 + ammo packs + hand grenade. Engineer: mines, repair, hack doors.",
+            "value": "Soldier: C4 + ammo packs + hand grenade. Engineer: mines, repair, hack doors."
         },
         {
             "key": "Spectators aren't allowed to start a vote.",
@@ -215,6 +307,14 @@
         {
             "key": "Speed: %i | 60, Health: %i | 10",
             "value": "Speed: %i | 60, Health: %i | 10"
+        },
+        {
+            "key": "Stand on checkpoints A/B/C to capture them. Enemy doors: Engineer can hack.",
+            "value": "Stand on checkpoints A/B/C to capture them. Enemy doors: Engineer can hack."
+        },
+        {
+            "key": "Step on a class tile (Soldier/Engineer/Medic/Sniper) before fighting.",
+            "value": "Step on a class tile (Soldier/Engineer/Medic/Sniper) before fighting."
         },
         {
             "key": "Switched Type to [aim control]",
@@ -261,8 +361,28 @@
             "value": "To far away from the station! Go back with your cursor!"
         },
         {
+            "key": "Type /cmds for the full command list.",
+            "value": "Type /cmds for the full command list."
+        },
+        {
+            "key": "Type /help for gameplay help.",
+            "value": "Type /help for gameplay help."
+        },
+        {
+            "key": "Type /help to learn classes, vehicles, and objectives.",
+            "value": "Type /help to learn classes, vehicles, and objectives."
+        },
+        {
+            "key": "Unknown help topic. Try: class, controls, vehicles, objectives.",
+            "value": "Unknown help topic. Try: class, controls, vehicles, objectives."
+        },
+        {
             "key": "Usage: /language zh-cn",
             "value": "Usage: /language zh-cn"
+        },
+        {
+            "key": "Vehicle tip: press Shift or type /e to exit.",
+            "value": "Vehicle tip: press Shift or type /e to exit."
         },
         {
             "key": "Vehicle-Health: %i | %i",
@@ -289,6 +409,10 @@
             "value": "Wait for current vote to end before calling a new one."
         },
         {
+            "key": "Walk into a team vehicle to board. Heli/Tank can carry a passenger.",
+            "value": "Walk into a team vehicle to board. Heli/Tank can carry a passenger."
+        },
+        {
             "key": "Water-Weapon = Arrows. Only usable in water. Press Spacebar to fire it.",
             "value": "Water-Weapon = Arrows. Only usable in water. Press Spacebar to fire it."
         },
@@ -299,6 +423,10 @@
         {
             "key": "Water-Weapon = Throwing-Star. Only usable in water. Press Spacebar to fire it.",
             "value": "Water-Weapon = Throwing-Star. Only usable in water. Press Spacebar to fire it."
+        },
+        {
+            "key": "Welcome to OpenBattle — capture the flag and hold checkpoints A/B/C.",
+            "value": "Welcome to OpenBattle — capture the flag and hold checkpoints A/B/C."
         },
         {
             "key": "You are already %s.",
@@ -351,6 +479,10 @@
         {
             "key": "You must wait %d seconds before making another vote",
             "value": "You must wait %d seconds before making another vote"
+        },
+        {
+            "key": "You still have no class. Step on a class tile (Soldier/Engineer/Medic/Sniper).",
+            "value": "You still have no class. Step on a class tile (Soldier/Engineer/Medic/Sniper)."
         },
         {
             "key": "You were moved to %s due to team balancing",
@@ -435,6 +567,10 @@
         {
             "key": "spectators",
             "value": "spectators"
+        },
+        {
+            "key": "try /cmds",
+            "value": "try /cmds"
         },
         {
             "key": "write /help for Infos about the Game",

@@ -31,6 +31,7 @@ public:
     
     virtual void Init();
     virtual const char *GetLanguageCode(int Country);
+    virtual const char *GetLanguageCodeFromISO(const char *pCountryIso);
     virtual const char *Localize(const char *pLanguage, const char *pText);
 };
 

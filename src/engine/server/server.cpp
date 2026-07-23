@@ -346,7 +346,7 @@ int CServer::GetClientInfo(int ClientID, CClientInfo *pInfo)
 
 void CServer::GetClientAddr(int ClientID, char *pAddrStr, int Size)
 {
-	if(ClientID >= 0 && ClientID < MAX_CLIENTS && m_aClients[ClientID].m_State == CClient::STATE_INGAME)
+	if(ClientID >= 0 && ClientID < MAX_CLIENTS && m_aClients[ClientID].m_State != CClient::STATE_EMPTY)
 	{
 		NETADDR Addr = m_NetServer.ClientAddr(ClientID);
 		Addr.port = 0;

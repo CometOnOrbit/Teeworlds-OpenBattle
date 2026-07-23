@@ -183,7 +183,7 @@ void CProjectile::Tick()
 			}
 			else if(m_CustomType == 8)
 			{
-				GameServer()->CreateExplosion2(CurPos, m_Owner, m_Weapon, 0);
+				GameServer()->CreateExplosion2(CurPos, m_Owner, m_Weapon, 1);
 				GameServer()->CreateSound(CurPos, SOUND_GRENADE_EXPLODE);
 			}
 			else if(m_CustomType == 23 && (Collide || DoorCollide))

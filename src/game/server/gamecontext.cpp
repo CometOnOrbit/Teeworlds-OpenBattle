@@ -6,6 +6,7 @@
 #include <engine/map.h>
 #include <engine/console.h>
 #include <engine/localization.h>
+#include <engine/storage.h>
 #include "gamecontext.h"
 #include <game/version.h>
 #include <game/collision.h>
@@ -681,6 +682,7 @@ void CGameContext::OnClientEnter(int ClientID)
 	str_format(aBuf, sizeof(aBuf), "team_join player='%d:%s' team=%d", ClientID, Server()->ClientName(ClientID), m_apPlayers[ClientID]->GetTeam());
 	Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 
+	SendWelcomeTutorial(ClientID);
 	m_VoteUpdate = true;
 }
 
@@ -756,65 +758,16 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		if(g_Config.m_SvSpamprotection && pPlayer->m_LastChat && pPlayer->m_LastChat+Server()->TickSpeed() > Server()->Tick())
 			return;
 
-		if(str_comp_nocase(pMsg->m_pMessage, "/e") == 0)
+		if(pMsg->m_pMessage[0] == '/')
 		{
-			CCharacter *pCharacter = pPlayer ? pPlayer->GetCharacter() : 0;
-			if(pCharacter)
-				pCharacter->HandleBattlefieldExitCommand();
-			return;
-		}
-		if(str_comp_nocase_num(pMsg->m_pMessage, "/language ", 10) == 0 ||
-			str_comp_nocase_num(pMsg->m_pMessage, "/lang ", 6) == 0)
-		{
-			const char *pLang = str_comp_nocase_num(pMsg->m_pMessage, "/language ", 10) == 0 ?
-				pMsg->m_pMessage + 10 : pMsg->m_pMessage + 6;
-			while(*pLang == ' ')
-				pLang++;
-			if(!pLang[0])
-			{
-				SendChatTarget(ClientID, "Usage: /language zh-cn");
+			if(HandleChatCommand(ClientID, pMsg->m_pMessage))
 				return;
-			}
-			str_copy(pPlayer->m_aLanguage, pLang, sizeof(pPlayer->m_aLanguage));
-			char aBuf[128];
-			str_format(aBuf, sizeof(aBuf), Localize("Language set to '%s'", ClientID), pPlayer->m_aLanguage);
-			SendChatTarget(ClientID, aBuf);
-			return;
-		}
-		if(str_comp_nocase(pMsg->m_pMessage, "/language") == 0 ||
-			str_comp_nocase(pMsg->m_pMessage, "/lang") == 0)
-		{
-			char aBuf[128];
-			str_format(aBuf, sizeof(aBuf), Localize("Current language: %s", ClientID), pPlayer->m_aLanguage);
-			SendChatTarget(ClientID, aBuf);
-			SendChatTarget(ClientID, "Usage: /language zh-cn");
-			return;
-		}
-		if(str_comp_nocase(pMsg->m_pMessage, "/info") == 0)
-		{
-			SendChatTarget(ClientID, MOD_NAME " - open-source version by " MOD_AUTHOR);
-			SendChatTarget(ClientID, "Original mod by " MOD_ORIGINAL_AUTHOR ".");
-			SendChatTarget(ClientID, "write /help for Infos about the Game");
-			return;
-		}
-		if(str_comp_nocase(pMsg->m_pMessage, "/help") == 0)
-		{
-			SendChatTarget(ClientID, MOD_NAME " by " MOD_AUTHOR);
-			SendChatTarget(ClientID, "This Mod based on the Idea of Battlefield.");
-			SendChatTarget(ClientID,
-				"Press shift or write /e to get out of the vehicles.");
-			SendChatTarget(ClientID, "write /info for credits and version");
-			SendChatTarget(ClientID, "write /language <code> to change language");
+			SendChatTarget(ClientID, "no such command");
+			SendChatTarget(ClientID, "try /cmds");
 			return;
 		}
 		if(pMsg->m_pMessage[0] == '\0')
 			return;
-		if(pMsg->m_pMessage[0] == '/')
-		{
-			SendChatTarget(ClientID, "no such command");
-			SendChatTarget(ClientID, "write /info for more informations");
-			return;
-		}
 
 		pPlayer->m_LastChat = Server()->Tick();
 
@@ -1075,6 +1028,14 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		Server()->SetClientClan(ClientID, pMsg->m_pClan);
 		Server()->SetClientCountry(ClientID, pMsg->m_Country);
 		str_copy(pPlayer->m_aLanguage, Localization()->GetLanguageCode(pMsg->m_Country), sizeof(pPlayer->m_aLanguage));
+		if(!m_IpCountry.Empty())
+		{
+			char aAddr[NETADDR_MAXSTRSIZE] = {0};
+			Server()->GetClientAddr(ClientID, aAddr, sizeof(aAddr));
+			char aIso[8];
+			if(aAddr[0] && m_IpCountry.Lookup(aAddr, aIso, sizeof(aIso)))
+				str_copy(pPlayer->m_aLanguage, Localization()->GetLanguageCodeFromISO(aIso), sizeof(pPlayer->m_aLanguage));
+		}
 		str_copy(pPlayer->m_TeeInfos.m_SkinName, pMsg->m_pSkin, sizeof(pPlayer->m_TeeInfos.m_SkinName));
 		pPlayer->m_TeeInfos.m_UseCustomColor = pMsg->m_UseCustomColor;
 		pPlayer->m_TeeInfos.m_ColorBody = pMsg->m_ColorBody;
@@ -1652,6 +1613,14 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	m_World.SetGameServer(this);
 	m_Events.SetGameServer(this);
 
+	CIpCountryDb::SelfCheck();
+	if(g_Config.m_SvIpinfoFile[0])
+	{
+		IStorage *pStorage = Kernel()->RequestInterface<IStorage>();
+		if(pStorage)
+			m_IpCountry.Load(pStorage, g_Config.m_SvIpinfoFile);
+	}
+
 	//if(!data) // only load once
 		//data = load_data_from_memory(internal_data);
 
@@ -1761,6 +1730,134 @@ const char *CGameContext::Localize(const char *pText, int ClientID)
 	if(!m_pLocalization || ClientID < 0 || ClientID >= MAX_CLIENTS || !m_apPlayers[ClientID])
 		return pText;
 	return m_pLocalization->Localize(m_apPlayers[ClientID]->m_aLanguage, pText);
+}
+
+void CGameContext::TrySendTip(int ClientID, int TipFlag, const char *pText)
+{
+	if(ClientID < 0 || ClientID >= MAX_CLIENTS || !m_apPlayers[ClientID] || !pText)
+		return;
+	if(!m_apPlayers[ClientID]->TryConsumeTip(TipFlag))
+		return;
+	SendChatTarget(ClientID, pText);
+}
+
+void CGameContext::SendWelcomeTutorial(int ClientID)
+{
+	if(!g_Config.m_SvTutorial || !m_apPlayers[ClientID])
+		return;
+	if(!m_apPlayers[ClientID]->TryConsumeTip(CPlayer::TIP_WELCOME))
+		return;
+
+	SendChatTarget(ClientID, "Welcome to OpenBattle — capture the flag and hold checkpoints A/B/C.");
+	SendChatTarget(ClientID, "Type /help to learn classes, vehicles, and objectives.");
+	SendChatTarget(ClientID, "Step on a class tile (Soldier/Engineer/Medic/Sniper) before fighting.");
+	SendChatTarget(ClientID, "Type /cmds for the full command list.");
+}
+
+bool CGameContext::HandleChatCommand(int ClientID, const char *pMessage)
+{
+	CPlayer *pPlayer = m_apPlayers[ClientID];
+	if(!pPlayer || !pMessage || pMessage[0] != '/')
+		return false;
+
+	SendChatTarget(ClientID, "==== ## -- ## ====");
+
+	if(str_comp_nocase(pMessage, "/e") == 0)
+	{
+		CCharacter *pCharacter = pPlayer->GetCharacter();
+		if(pCharacter)
+			pCharacter->HandleBattlefieldExitCommand();
+		return true;
+	}
+
+	if(str_comp_nocase_num(pMessage, "/language ", 10) == 0 ||
+		str_comp_nocase_num(pMessage, "/lang ", 6) == 0)
+	{
+		const char *pLang = str_comp_nocase_num(pMessage, "/language ", 10) == 0 ?
+			pMessage + 10 : pMessage + 6;
+		while(*pLang == ' ')
+			pLang++;
+		if(!pLang[0])
+		{
+			SendChatTarget(ClientID, "Usage: /language zh-cn");
+			return true;
+		}
+		str_copy(pPlayer->m_aLanguage, pLang, sizeof(pPlayer->m_aLanguage));
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), Localize("Language set to '%s'", ClientID), pPlayer->m_aLanguage);
+		SendChatTarget(ClientID, aBuf);
+		return true;
+	}
+	if(str_comp_nocase(pMessage, "/language") == 0 ||
+		str_comp_nocase(pMessage, "/lang") == 0)
+	{
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), Localize("Current language: %s", ClientID), pPlayer->m_aLanguage);
+		SendChatTarget(ClientID, aBuf);
+		SendChatTarget(ClientID, "Usage: /language zh-cn");
+		return true;
+	}
+
+	if(str_comp_nocase(pMessage, "/info") == 0)
+	{
+		SendChatTarget(ClientID, MOD_NAME " - open-source version by " MOD_AUTHOR);
+		SendChatTarget(ClientID, "Original mod by " MOD_ORIGINAL_AUTHOR ".");
+		SendChatTarget(ClientID, "Type /help for gameplay help.");
+		return true;
+	}
+
+	if(str_comp_nocase(pMessage, "/cmds") == 0)
+	{
+		SendChatTarget(ClientID, "/help [class|controls|vehicles|objectives]");
+		SendChatTarget(ClientID, "/info  /cmds  /e  /language <code>");
+		return true;
+	}
+
+	if(str_comp_nocase_num(pMessage, "/help", 5) == 0 &&
+		(pMessage[5] == 0 || pMessage[5] == ' '))
+	{
+		const char *pTopic = pMessage + 5;
+		while(*pTopic == ' ')
+			pTopic++;
+
+		if(!pTopic[0])
+		{
+			SendChatTarget(ClientID, "OpenBattle: team CTF + checkpoints. Pick a class tile first.");
+			SendChatTarget(ClientID, "/help class | controls | vehicles | objectives");
+			SendChatTarget(ClientID, "Shift or /e exits vehicles. Emote or /e throws a hand grenade (Soldier).");
+			return true;
+		}
+		if(str_comp_nocase(pTopic, "class") == 0)
+		{
+			SendChatTarget(ClientID, "Classes (step on map tiles):");
+			SendChatTarget(ClientID, "Soldier: C4 + ammo packs + hand grenade. Engineer: mines, repair, hack doors.");
+			SendChatTarget(ClientID, "Medic: heal shots. Sniper: rifle + stealth (Hammer toggles invis).");
+			return true;
+		}
+		if(str_comp_nocase(pTopic, "controls") == 0)
+		{
+			SendChatTarget(ClientID, "Shift or /e: leave vehicle / cannon / fire smoke.");
+			SendChatTarget(ClientID, "Emote or /e (Soldier): throw hand grenade. Space: fire water weapon.");
+			SendChatTarget(ClientID, "Anti-Tank: mouse wheel switches aim / manual mode.");
+			return true;
+		}
+		if(str_comp_nocase(pTopic, "vehicles") == 0)
+		{
+			SendChatTarget(ClientID, "Walk into a team vehicle to board. Heli/Tank can carry a passenger.");
+			SendChatTarget(ClientID, "Enemy vehicles need the matching key — even empty ones cannot be seized. Engineers can only damage occupied enemy vehicles. Exit: Shift or /e.");
+			return true;
+		}
+		if(str_comp_nocase(pTopic, "objectives") == 0)
+		{
+			SendChatTarget(ClientID, "Capture the enemy flag and return it to your base for big team score.");
+			SendChatTarget(ClientID, "Stand on checkpoints A/B/C to capture them. Enemy doors: Engineer can hack.");
+			return true;
+		}
+		SendChatTarget(ClientID, "Unknown help topic. Try: class, controls, vehicles, objectives.");
+		return true;
+	}
+
+	return false;
 }
 
 IGameServer *CreateGameServer() { return new CGameContext; }
