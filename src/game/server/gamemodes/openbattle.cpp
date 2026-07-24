@@ -807,9 +807,21 @@ void CGameControllerOpenBattle::TickDynamicObjectives()
 			EndObjective(false);
 		return;
 	}
+
+	if(m_ObjectivePreannounced)
+	{
+		if(m_RoundActiveTicks >= m_NextObjectiveStartTick)
+		{
+			int Objective = m_CurrentObjective;
+			m_CurrentObjective = OBJECTIVE_NONE;
+			m_ObjectivePreannounced = false;
+			StartObjective(Objective);
+		}
+		return;
+	}
 	if(m_CurrentObjective == OBJECTIVE_NONE)
 	{
-		if(!m_ObjectivePreannounced && m_RoundActiveTicks >= m_NextObjectiveStartTick-15*Server()->TickSpeed())
+		if(m_RoundActiveTicks >= m_NextObjectiveStartTick-15*Server()->TickSpeed())
 		{
 			int Next = PickNextObjective();
 			if(Next == OBJECTIVE_NONE)
@@ -819,18 +831,8 @@ void CGameControllerOpenBattle::TickDynamicObjectives()
 			m_ObjectivePreannounced = true;
 			AnnounceObjective("Dynamic objective incoming: %s (starts in 15 seconds).", Next, SOUND_CHAT_HIGHLIGHT);
 		}
-		if(m_ObjectivePreannounced && m_RoundActiveTicks >= m_NextObjectiveStartTick)
-		{
-			int Objective = m_CurrentObjective;
-			m_CurrentObjective = OBJECTIVE_NONE;
-			m_ObjectivePreannounced = false;
-			StartObjective(Objective);
-		}
 		return;
 	}
-	// A preannounced objective uses m_CurrentObjective but has not started yet.
-	if(m_ObjectivePreannounced)
-		return;
 
 	if(m_ComebackActive && m_ComebackTeam >= 0 && m_aTeamscore[m_ComebackTeam] >= m_aTeamscore[m_ComebackTeam^1])
 	{
@@ -975,7 +977,7 @@ void CGameControllerOpenBattle::SendObjectiveStatus(int ClientID)
 	}
 	if(m_ObjectivePreannounced)
 	{
-		int Seconds = max(0, (m_NextObjectiveStartTick-m_RoundActiveTicks+Server()->TickSpeed()-1)/Server()->TickSpeed());
+		int Seconds = max(1, (m_NextObjectiveStartTick-m_RoundActiveTicks+Server()->TickSpeed()-1)/Server()->TickSpeed());
 		str_format(aBuf, sizeof(aBuf), GameServer()->Localize("Incoming objective: %s (%d seconds).", ClientID),
 			GameServer()->Localize(ObjectiveName(m_CurrentObjective), ClientID), Seconds);
 		GameServer()->SendChatTarget(ClientID, aBuf);
