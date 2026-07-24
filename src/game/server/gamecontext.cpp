@@ -2181,7 +2181,13 @@ bool CGameContext::HandleChatCommand(int ClientID, const char *pMessage)
 	if(str_comp_nocase(pMessage, "/cmds") == 0)
 	{
 		SendChatTarget(ClientID, "/help [class|controls|vehicles|objectives]");
-		SendChatTarget(ClientID, "/info  /cmds  /e  /language <code>");
+		SendChatTarget(ClientID, "/info  /cmds  /objective  /e  /language <code>");
+		return true;
+	}
+
+	if(str_comp_nocase(pMessage, "/objective") == 0)
+	{
+		m_pController->SendObjectiveStatus(ClientID);
 		return true;
 	}
 
@@ -2221,8 +2227,10 @@ bool CGameContext::HandleChatCommand(int ClientID, const char *pMessage)
 		}
 		if(str_comp_nocase(pTopic, "objectives") == 0)
 		{
-			SendChatTarget(ClientID, "Capture the enemy flag and return it to your base for big team score.");
-			SendChatTarget(ClientID, "Stand on checkpoints A/B/C to capture them. Enemy doors: Engineer can hack.");
+			SendChatTarget(ClientID, "A starts red, B starts blue, and neutral C unlocks after 20 seconds.");
+			SendChatTarget(ClientID, "Checkpoint capture accelerates with teammates, freezes when contested, and rolls back after 3 empty seconds.");
+			SendChatTarget(ClientID, "Dynamic objectives rotate between flags, C, enemy checkpoints, breakthroughs, area control, and combined arms.");
+			SendChatTarget(ClientID, "Use /objective for the current objective, team stage, timer, and comeback bonus.");
 			return true;
 		}
 		SendChatTarget(ClientID, "Unknown help topic. Try: class, controls, vehicles, objectives.");

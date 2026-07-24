@@ -110,6 +110,9 @@ public:
 			bool?
 	*/
 	virtual bool OnEntity(int Index, vec2 Pos);
+	// OpenBattle capture tiles register occupants here. Other game modes ignore it.
+	virtual void RegisterCheckpointPresence(int Checkpoint, int ClientID) { (void)Checkpoint; (void)ClientID; }
+	virtual void SendObjectiveStatus(int ClientID) { (void)ClientID; }
 
 	/*
 		Function: on_CCharacter_spawn

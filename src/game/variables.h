@@ -33,6 +33,8 @@ MACRO_CONFIG_INT(SvVoteKickMin, sv_vote_kick_min, 0, 0, MAX_CLIENTS, CFGFLAG_SER
 MACRO_CONFIG_INT(SvVoteKickBantime, sv_vote_kick_bantime, 5, 0, 1440, CFGFLAG_SERVER, "The time to ban a player if kicked by vote. 0 makes it just use kick")
 MACRO_CONFIG_INT(SvTutorial, sv_tutorial, 1, 0, 1, CFGFLAG_SERVER, "Send welcome tips and class reminders to new players")
 MACRO_CONFIG_STR(SvIpinfoFile, sv_ipinfo_file, 256, "server/ipinfo/country.csv", CFGFLAG_SERVER, "IPinfo country.csv for auto language by IP (empty disables)")
+MACRO_CONFIG_INT(SvDynamicObjectives, sv_dynamic_objectives, 1, 0, 1, CFGFLAG_SERVER, "Enable rotating OpenBattle dynamic objectives")
+MACRO_CONFIG_INT(SvDynamicComeback, sv_dynamic_comeback, 1, 0, 1, CFGFLAG_SERVER, "Double dynamic team rewards for an eligible trailing team")
 
 // debug
 #ifdef CONF_DEBUG // this one can crash the server if not used correctly

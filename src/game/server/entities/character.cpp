@@ -3289,7 +3289,7 @@ void CCharacter::Check(int Checkpoint)
 		return;
 
 	int Index = Checkpoint-1;
-	int &State = GameServer()->m_aCheckpointState[Index];
+	int State = GameServer()->m_aCheckpointState[Index];
 	int Gauge = clamp(State/80, -5, 5);
 	static const char *s_apGauge[11] =
 	{
@@ -3302,109 +3302,11 @@ void CCharacter::Check(int Checkpoint)
 	GameServer()->TrySendTip(m_pPlayer->GetCID(), CPlayer::TIP_CHECKPOINT,
 		"Checkpoint tip: stand here to capture A/B/C. Your team gets score; enemies get a warning chat.");
 
-	if(State > -401 && State < 401)
-	{
-		if(m_pPlayer->GetTeam() == TEAM_RED)
-		{
-			State--;
-			if(State > 0 && !GameServer()->m_aCheckpointWarning[Index][TEAM_RED] &&
-				GameServer()->m_aCheckpointWarningCooldown[TEAM_RED] == 0)
-			{
-				char aBuf[256];
-				for(int i = 0; i < MAX_CLIENTS; i++)
-				{
-					if(!GameServer()->m_apPlayers[i] || GameServer()->m_apPlayers[i]->GetTeam() != TEAM_BLUE)
-						continue;
-					str_format(aBuf, sizeof(aBuf), GameServer()->Localize("[Warning] Red-Team is attacking Checkpoint %c!", i),
-						'A'+Index);
-					CNetMsg_Sv_Chat Msg;
-					Msg.m_Team = 1;
-					Msg.m_ClientID = -1;
-					Msg.m_pMessage = aBuf;
-					Server()->SendPackMsg(&Msg, MSGFLAG_VITAL|MSGFLAG_NORECORD, i);
-				}
-				GameServer()->m_aCheckpointWarning[Index][TEAM_RED] = true;
-				GameServer()->m_aCheckpointWarningCooldown[TEAM_RED] = Server()->TickSpeed()*15;
-			}
-		}
-		else if(m_pPlayer->GetTeam() == TEAM_BLUE)
-		{
-			State++;
-			if(State < 0 && !GameServer()->m_aCheckpointWarning[Index][TEAM_BLUE] &&
-				GameServer()->m_aCheckpointWarningCooldown[TEAM_BLUE] == 0)
-			{
-				char aBuf[256];
-				for(int i = 0; i < MAX_CLIENTS; i++)
-				{
-					if(!GameServer()->m_apPlayers[i] || GameServer()->m_apPlayers[i]->GetTeam() != TEAM_RED)
-						continue;
-					str_format(aBuf, sizeof(aBuf), GameServer()->Localize("[Warning] Blue-Team is attacking Checkpoint %c!", i),
-						'A'+Index);
-					CNetMsg_Sv_Chat Msg;
-					Msg.m_Team = 1;
-					Msg.m_ClientID = -1;
-					Msg.m_pMessage = aBuf;
-					Server()->SendPackMsg(&Msg, MSGFLAG_VITAL|MSGFLAG_NORECORD, i);
-				}
-				GameServer()->m_aCheckpointWarning[Index][TEAM_BLUE] = true;
-				GameServer()->m_aCheckpointWarningCooldown[TEAM_BLUE] = Server()->TickSpeed()*15;
-			}
-		}
-	}
-
-	if(State == 0)
-	{
-		GameServer()->m_aCheckpointCaptured[Index] = false;
-		GameServer()->m_aCheckpointWarning[Index][TEAM_RED] = false;
-		GameServer()->m_aCheckpointWarning[Index][TEAM_BLUE] = false;
-	}
-
-	int CapturingTeam = -1;
-	if(State < -400)
-	{
-		State = -400;
-		// At Red's endpoint clear the Blue attack warning.
-		GameServer()->m_aCheckpointWarning[Index][TEAM_BLUE] = false;
-		CapturingTeam = TEAM_RED;
-	}
-	else if(State > 400)
-	{
-		State = 400;
-		// At Blue's endpoint clear the Red attack warning.
-		GameServer()->m_aCheckpointWarning[Index][TEAM_RED] = false;
-		CapturingTeam = TEAM_BLUE;
-	}
-
-	if(CapturingTeam != -1 && !GameServer()->m_aCheckpointCaptured[Index])
-	{
-		GameServer()->m_aCheckpointCaptured[Index] = true;
-		m_pPlayer->m_Score += 5;
-		GameServer()->m_pController->AddTeamScore(CapturingTeam, 20);
-		GameServer()->CreateSound(m_Pos, SOUND_CTF_CAPTURE);
-
-		char aBuf[256];
-		for(int i = 0; i < MAX_CLIENTS; i++)
-		{
-			if(!GameServer()->m_apPlayers[i])
-				continue;
-			str_format(aBuf, sizeof(aBuf), GameServer()->Localize("%s-Team (%s) captured Checkpoint %c!", i),
-				GameServer()->Localize(CapturingTeam == TEAM_RED ? "Red" : "Blue", i),
-				Server()->ClientName(m_pPlayer->GetCID()), 'A'+Index);
-			CNetMsg_Sv_Chat Msg;
-			Msg.m_Team = 0;
-			Msg.m_ClientID = -1;
-			Msg.m_pMessage = aBuf;
-			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
-		}
-	}
-
-	// Emit SOUND_HOOK_NOATTACH at every 80-point milestone,
-	// including neutral, with a distinct 0.8-second gate for each checkpoint.
-	if((State % 80) == 0 && GameServer()->m_aCheckpointProgressSoundCooldown[Index] == 0)
-	{
-		GameServer()->CreateSound(m_Pos, SOUND_HOOK_NOATTACH);
-		GameServer()->m_aCheckpointProgressSoundCooldown[Index] = (int)(Server()->TickSpeed()*0.8f + 0.5f);
-	}
+	// Capture resolution is centralized in the game controller. Registering a
+	// boolean per client also prevents overlapping capture tiles from counting a
+	// player more than once for the same checkpoint and server tick.
+	if(IsAlive() && m_pPlayer->GetTeam() != TEAM_SPECTATORS && m_pPlayer->HasBattlefieldClass())
+		GameServer()->m_pController->RegisterCheckpointPresence(Index, m_pPlayer->GetCID());
 }
 
 void CCharacter::GiveNinja()
