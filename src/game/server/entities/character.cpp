@@ -2233,10 +2233,21 @@ void CCharacter::RequestBattlefieldVehicleExit()
 	m_BattlefieldVehicleExitRequested = true;
 }
 
+static bool BattlefieldKeepHalfExitSpeed(int Type)
+{
+	return Type == CCharacter::BATTLEFIELD_VEHICLE_HELI ||
+		Type == CCharacter::BATTLEFIELD_VEHICLE_JET ||
+		Type == CCharacter::BATTLEFIELD_VEHICLE_UBOAT ||
+		Type == CCharacter::BATTLEFIELD_VEHICLE_SHIP ||
+		Type == CCharacter::BATTLEFIELD_VEHICLE_MINI;
+}
+
 void CCharacter::DetachBattlefieldVehicle(CBattle *pVehicle)
 {
 	if(pVehicle && pVehicle != m_pBattlefieldVehicle)
 		return;
+	const int Type = m_BattlefieldVehicleType;
+	const vec2 ExitVel = BattlefieldKeepHalfExitSpeed(Type) ? m_Core.m_Vel*0.5f : vec2(0, 0);
 	if(m_BattlefieldVehiclePassenger && m_pBattlefieldSeatDriver &&
 		m_pBattlefieldSeatDriver->m_pBattlefieldPassenger == this)
 		m_pBattlefieldSeatDriver->m_pBattlefieldPassenger = 0;
@@ -2280,6 +2291,18 @@ void CCharacter::DetachBattlefieldVehicle(CBattle *pVehicle)
 	// One-second vehicle entry cooldown. Abandoned vehicles stay immediately
 	// reclaimable; the spawn-return path uses a separate three-second lock.
 	m_BattlefieldVehicleEntryCooldown = Server()->TickSpeed();
+	m_Core.m_Vel = ExitVel;
+
+	if(Type == BATTLEFIELD_VEHICLE_JET)
+	{
+		m_Ninja.m_CurrentMoveTime = 0;
+		m_NinjaMovementBlocked = false;
+		m_QueuedWeapon = -1;
+		m_ActiveWeapon = m_LastWeapon;
+		if(m_ActiveWeapon < 0 || m_ActiveWeapon >= NUM_WEAPONS ||
+			!m_aWeapons[m_ActiveWeapon].m_Got)
+			m_ActiveWeapon = WEAPON_GUN;
+	}
 }
 
 vec2 CCharacter::GetBattlefieldVehicleAim() const
@@ -2325,8 +2348,12 @@ void CCharacter::LeaveBattlefieldVehicle(bool Destroyed, bool ImmediateReset)
 	// inputs, detach first, and only then publish the damaging explosions.
 	const int VehicleType = m_BattlefieldVehicleType;
 	const vec2 VehiclePos = m_Pos;
+	// Prefer CBattle's pre-Core sync vel so exit keeps real flight/swim speed.
+	const vec2 ExitVel = BattlefieldKeepHalfExitSpeed(VehicleType) ?
+		pVehicle->GetVel()*0.5f : vec2(0, 0);
 	pVehicle->OnDriverLeft(this, Destroyed, ImmediateReset);
 	DetachBattlefieldVehicle(pVehicle);
+	m_Core.m_Vel = ExitVel;
 	if(Destroyed)
 		CreateVehicleDestructionEffects(VehicleType, VehiclePos);
 }
@@ -2337,8 +2364,12 @@ void CCharacter::ResetBattlefieldVehicleFromWater()
 		return;
 	// Shared by water, /e and Stop-triggered vehicle resets. CBattle observes
 	// the released driver through its ordinary ten-second abandoned path.
+	const int VehicleType = m_BattlefieldVehicleType;
+	const vec2 ExitVel = BattlefieldKeepHalfExitSpeed(VehicleType) ?
+		m_pBattlefieldVehicle->GetVel()*0.5f : vec2(0, 0);
 	m_pBattlefieldVehicle->OnDriverLeft(this, false, false);
 	DetachBattlefieldVehicle(m_pBattlefieldVehicle);
+	m_Core.m_Vel = ExitVel;
 }
 
 void CCharacter::PrepareBattlefieldVehicleWeaponState()

@@ -74,6 +74,7 @@ void CBattle::ResetToSpawn(bool ApplyEnterCooldown)
 	m_EnterCooldown = ApplyEnterCooldown ? Server()->TickSpeed()*3 : 0;
 	m_RepairCooldown = 0;
 	m_Repairing = false;
+	m_JetSafelyStopped = false;
 	m_SnapshotTilt = 0.0f;
 	m_SnapshotTiltCooldown = 0;
 }
@@ -185,7 +186,6 @@ void CBattle::OnDriverLeft(CCharacter *pDriver, bool Destroyed, bool ImmediateRe
 		return;
 
 	m_Health = clamp(pDriver->GetBattlefieldVehicleHealth(), 0, MaxHealth(m_Type));
-	m_Vel = pDriver->GetBattlefieldVehicleVelocity();
 	m_LastDriverCID = pDriver->GetPlayer() ? pDriver->GetPlayer()->GetCID() : -1;
 	m_JetSafelyStopped = pDriver->BattlefieldJetSafelyStopped();
 	m_PhysicalPos = pDriver->m_Pos;
@@ -323,16 +323,26 @@ void CBattle::Tick()
 			m_Vel.x = 0.0f;
 
 		float Elasticity = 0.5f;
-		if(m_Type == TYPE_JET && !m_JetSafelyStopped &&
-			(GameServer()->Collision()->CheckPoint(m_PhysicalPos.x+30.0f, m_PhysicalPos.y) ||
-			 GameServer()->Collision()->CheckPoint(m_PhysicalPos.x-30.0f, m_PhysicalPos.y) ||
-			 GameServer()->Collision()->CheckPoint(m_PhysicalPos.x, m_PhysicalPos.y-30.0f) ||
-			 GameServer()->Collision()->CheckPoint(m_PhysicalPos.x, m_PhysicalPos.y+30.0f)))
+		if(m_Type == TYPE_JET)
 		{
-			CrashAbandonedJet();
-			return;
+			if(!m_JetSafelyStopped &&
+				(GameServer()->Collision()->CheckPoint(m_PhysicalPos.x+30.0f, m_PhysicalPos.y) ||
+				 GameServer()->Collision()->CheckPoint(m_PhysicalPos.x-30.0f, m_PhysicalPos.y) ||
+				 GameServer()->Collision()->CheckPoint(m_PhysicalPos.x, m_PhysicalPos.y-30.0f) ||
+				 GameServer()->Collision()->CheckPoint(m_PhysicalPos.x, m_PhysicalPos.y+30.0f)))
+			{
+				CrashAbandonedJet();
+				return;
+			}
+			// battle_srv Jet coast: gravity, then hard-stop both axes on ground.
+			m_Vel.y += 0.5f;
+			if(GameServer()->Collision()->CheckPoint(m_PhysicalPos.x, m_PhysicalPos.y+30.0f))
+			{
+				m_Vel.x = 0.0f;
+				m_Vel.y = 0.0f;
+			}
 		}
-		if(m_Type == TYPE_SHIP || m_Type == TYPE_MINI)
+		else if(m_Type == TYPE_SHIP || m_Type == TYPE_MINI)
 		{
 			m_Vel.x *= 0.98f;
 			m_Vel.y = max(-4.0f, m_Vel.y)+0.4f;
@@ -428,6 +438,7 @@ void CBattle::Snap(int SnappingClient)
 	// after a vehicle has returned to spawn; ordinary abandoned vehicles remain
 	// visible and immediately reclaimable.
 
+	// Occupied: face cursor. Abandoned Jet/Mini: face velocity (battle_srv).
 	vec2 Aim(1, 0);
 	if(m_pDriver)
 		Aim = m_pDriver->GetBattlefieldVehicleAim();
@@ -438,7 +449,8 @@ void CBattle::Snap(int SnappingClient)
 
 	if(m_Type == TYPE_HELI)
 	{
-		float A = GetAngle(vec2(1.0f, m_pDriver ? m_SnapshotTilt : 0.0f));
+		// Keep last tilt while abandoned so the wreck coasts with its exit attitude.
+		float A = GetAngle(vec2(1.0f, m_SnapshotTilt));
 		SnapPickup(m_aExtraIDs[8], m_Pos+GetDir(A)*40.0f, POWERUP_HEALTH);
 		SnapPickup(m_aExtraIDs[1], m_Pos+GetDir(A)*-40.0f, POWERUP_HEALTH);
 		SnapPickup(m_aExtraIDs[2], m_Pos+GetDir(A-7.9f)*80.0f, POWERUP_ARMOR);
@@ -483,7 +495,7 @@ void CBattle::Snap(int SnappingClient)
 	}
 	else if(m_Type == TYPE_SHIP)
 	{
-		float A = GetAngle(vec2(1.0f, m_pDriver ? -m_SnapshotTilt : 0.0f));
+		float A = GetAngle(vec2(1.0f, -m_SnapshotTilt));
 		vec2 Center = m_Pos+vec2(0, 20);
 		SnapPickup(m_aExtraIDs[8], Center+GetDir(A)*20.0f, POWERUP_HEALTH);
 		SnapPickup(m_aExtraIDs[1], Center+GetDir(A)*-20.0f, POWERUP_HEALTH);

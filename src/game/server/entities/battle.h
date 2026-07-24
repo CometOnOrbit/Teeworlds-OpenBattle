@@ -28,6 +28,7 @@ public:
 	void OnDriverLeft(CCharacter *pDriver, bool Destroyed, bool ImmediateReset);
 	int GetType() const { return m_Type; }
 	int GetHealth() const { return m_Health; }
+	vec2 GetVel() const { return m_Vel; }
 
 	static int MaxHealth(int Type);
 	static const char *TypeName(int Type);
