@@ -1244,7 +1244,7 @@ void CServer::UpdateRegisterServerInfo()
 	if(g_Config.m_SvSixup)
 	{
 		char aVersion[64];
-		str_format(aVersion, sizeof(aVersion), "0.7↔%s", GameServer()->Version());
+		str_format(aVersion, sizeof(aVersion), "%s↔0.7", GameServer()->Version());
 		JsonWriter.WriteStrValue(aVersion);
 	}
 	else
