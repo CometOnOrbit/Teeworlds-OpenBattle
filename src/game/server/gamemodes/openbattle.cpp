@@ -13,6 +13,7 @@
 #include <game/server/entities/flag.h>
 #include <game/server/player.h>
 #include <game/server/gamecontext.h>
+#include <game/server/mapconfig.h>
 #include "openbattle.h"
 
 CGameControllerOpenBattle::CGameControllerOpenBattle(class CGameContext *pGameServer)
@@ -26,6 +27,7 @@ CGameControllerOpenBattle::CGameControllerOpenBattle(class CGameContext *pGameSe
 	m_GameFlags = GAMEFLAG_TEAMS|GAMEFLAG_FLAGS;
 	m_LastRoundStartTick = -1;
 	m_MapScanned = false;
+	m_MapModeValid = false;
 	m_CurrentObjective = OBJECTIVE_NONE;
 	m_LastObjective = OBJECTIVE_NONE;
 	m_ObjectivePoolSize = 0;
@@ -67,6 +69,16 @@ void CGameControllerOpenBattle::ResetRoundState()
 
 void CGameControllerOpenBattle::ScanMapObjectives()
 {
+	char aError[256];
+	CJsonParser Parser;
+	json_value *pRoot = 0;
+	m_MapModeValid = CMapConfig::LoadForMode(GameServer(), "openbattle", Parser, &pRoot, aError, sizeof(aError));
+	if(!m_MapModeValid)
+	{
+		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "openbattle", aError);
+		m_MapScanned = true;
+		return;
+	}
 	CCollision *pCollision = GameServer()->Collision();
 	int NumTiles = pCollision->GetWidth()*pCollision->GetHeight();
 	for(int i = 0; i < NumTiles; i++)
@@ -446,6 +458,11 @@ void CGameControllerOpenBattle::Tick()
 	}
 	if(!m_MapScanned)
 		ScanMapObjectives();
+	if(!m_MapModeValid)
+	{
+		EndRound();
+		return;
+	}
 
 	m_RoundActiveTicks++;
 	int TickSpeed = Server()->TickSpeed();

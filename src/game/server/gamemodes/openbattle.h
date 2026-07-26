@@ -29,6 +29,7 @@ private:
 	int m_LastRoundStartTick;
 	int m_RoundActiveTicks;
 	bool m_MapScanned;
+	bool m_MapModeValid;
 	bool m_CUnlockWarningSent;
 	bool m_CUnlockedSent;
 

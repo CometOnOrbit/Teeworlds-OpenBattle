@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "modes": ["openbattle", "ck"],
+  "ck": {
+    "points": [
+      { "number": 1, "label": "A", "from": [] },
+      { "number": 2, "label": "B", "from": [3] },
+      { "number": 3, "label": "C", "from": [1] }
+    ],
+    "goals": [2]
+  }
+}

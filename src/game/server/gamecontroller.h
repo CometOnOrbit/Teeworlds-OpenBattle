@@ -12,6 +12,8 @@
 */
 class IGameController
 {
+
+protected:
 	vec2 m_aaSpawnPoints[3][64];
 	int m_aNumSpawnPoints[3];
 	vec2 m_aaCheckpointLineStart[3][2];
@@ -20,8 +22,6 @@ class IGameController
 
 	class CGameContext *m_pGameServer;
 	class IServer *m_pServer;
-
-protected:
 	CGameContext *GameServer() const { return m_pGameServer; }
 	IServer *Server() const { return m_pServer; }
 
@@ -80,7 +80,7 @@ public:
 
 	void DoWarmup(int Seconds);
 
-	void StartRound();
+	virtual void StartRound();
 	void EndRound();
 	void ChangeMap(const char *pToMap);
 
@@ -110,9 +110,21 @@ public:
 			bool?
 	*/
 	virtual bool OnEntity(int Index, vec2 Pos);
+	// DDNet switch-layer entities carry a separate Number field. CK consumes
+	// ENTITY_DOOR from this path; other modes intentionally ignore it.
+	virtual bool OnSwitchEntity(int Index, vec2 Pos, int Number, int Flags) { (void)Index; (void)Pos; (void)Number; (void)Flags; return false; }
 	// OpenBattle capture tiles register occupants here. Other game modes ignore it.
 	virtual void RegisterCheckpointPresence(int Checkpoint, int ClientID) { (void)Checkpoint; (void)ClientID; }
 	virtual void SendObjectiveStatus(int ClientID) { (void)ClientID; }
+	// CK uses this for damage applied to its physical attacking-base flag.
+	// Keeping it on the controller makes all explosion producers share one path.
+	virtual void OnBaseDamage(vec2 Pos, int Owner, int Damage) { (void)Pos; (void)Owner; (void)Damage; }
+	virtual bool IsDoorClosed(int Number) const { (void)Number; return false; }
+	virtual int PointFlagTeam(int Number) const { (void)Number; return -1; }
+	virtual bool TeleportEnabled(int Number, int Side) const { (void)Number; (void)Side; return false; }
+	virtual bool DoorBlocksCharacter(int Number, int Team) const { (void)Number; (void)Team; return false; }
+	virtual bool CheckpointTileBlocksCharacter(int Number, int Team) const;
+	virtual bool IntersectDoor(vec2 From, vec2 To, vec2 *pHit, float Radius) const { (void)From; (void)To; (void)pHit; (void)Radius; return false; }
 
 	/*
 		Function: on_CCharacter_spawn

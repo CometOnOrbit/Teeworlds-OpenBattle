@@ -3,6 +3,7 @@
 #include <new>
 #include <base/math.h>
 #include <engine/shared/config.h>
+#include <engine/storage.h>
 #include <engine/map.h>
 #include <engine/console.h>
 #include <engine/localization.h>
@@ -13,6 +14,7 @@
 #include <game/gamecore.h>
 #include <game/generated/protocolglue.h>
 #include "gamemodes/openbattle.h"
+#include "gamemodes/ck.h"
 #include "entities/supply_station.h"
 
 enum
@@ -69,6 +71,11 @@ CGameContext::CGameContext()
 	Construct(NO_RESET);
 }
 
+IStorage *CGameContext::Storage()
+{
+	return Kernel()->RequestInterface<IStorage>();
+}
+
 CGameContext::~CGameContext()
 {
 	for(int i = 0; i < MAX_CLIENTS; i++)
@@ -107,6 +114,11 @@ class CCharacter *CGameContext::GetPlayerChar(int ClientID)
 
 bool CGameContext::IntersectBattlefieldDoor(vec2 From, vec2 To, vec2 *pHit, float Radius)
 {
+	// CK numbered doors share this collision entry so projectiles, vehicle
+	// weapons and the existing Battlefield weapons all stop at the same line.
+	if(m_pController && m_pController->IntersectDoor(From, To, pHit, Radius))
+		return true;
+
 	// Sample the path at one-unit steps against all six door segments so the
 	// first contact point is returned, not merely the closest point.
 	float PathLength = distance(From, To);
@@ -195,6 +207,7 @@ void CGameContext::CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamag
 
 	if (!NoDamage)
 	{
+		m_pController->OnBaseDamage(Pos, Owner, 6);
 		// deal damage
 		CCharacter *apEnts[MAX_CLIENTS];
 		float Radius = 135.0f;
@@ -228,6 +241,7 @@ void CGameContext::CreateExplosion2(vec2 Pos, int Owner, int Weapon, int Damage)
 
 	if(Damage == 1)
 	{
+		m_pController->OnBaseDamage(Pos, Owner, 3);
 		CCharacter *apEnts[MAX_CLIENTS];
 		const float Radius = 135.0f;
 		const float InnerRadius = 48.0f;
@@ -2006,8 +2020,12 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	//world = new GAMEWORLD;
 	//players = new CPlayer[MAX_CLIENTS];
 
-	// select gametype
-	m_pController = new CGameControllerOpenBattle(this);
+	// CK is deliberately opt-in. Existing OpenBattle servers keep their
+	// controller even when sv_gametype is left at its historical default.
+	if(str_comp_nocase(g_Config.m_SvGametype, "ck") == 0)
+		m_pController = new CGameControllerCK(this);
+	else
+		m_pController = new CGameControllerOpenBattle(this);
 
 	// setup core world
 	//for(int i = 0; i < MAX_CLIENTS; i++)
@@ -2042,6 +2060,24 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 				m_pController->OnEntity(Index-ENTITY_OFFSET, Pos);
 			}
 		}
+	}
+
+	// DDNet Switch entities are stored separately from the visible game tiles.
+	// At present CK consumes only numbered Door markers from this minimal path.
+	CMapItemLayerTilemap *pSwitchLayer = m_Layers.SwitchLayer();
+	int SwitchData = m_Layers.SwitchData();
+	if(pSwitchLayer && SwitchData >= 0 && pSwitchLayer->m_Width == pTileMap->m_Width && pSwitchLayer->m_Height == pTileMap->m_Height &&
+		pSwitchLayer->m_Width > 0 && pSwitchLayer->m_Height > 0)
+	{
+		CSwitchTile *pSwitchTiles = static_cast<CSwitchTile *>(m_Layers.Map()->GetData(SwitchData));
+		if(pSwitchTiles)
+			for(int y = 0; y < pSwitchLayer->m_Height; ++y)
+				for(int x = 0; x < pSwitchLayer->m_Width; ++x)
+				{
+					CSwitchTile &Tile = pSwitchTiles[y*pSwitchLayer->m_Width+x];
+					if(Tile.m_Type >= ENTITY_OFFSET)
+						m_pController->OnSwitchEntity(Tile.m_Type-ENTITY_OFFSET, vec2(x*32.0f+16.0f, y*32.0f+16.0f), Tile.m_Number, Tile.m_Flags);
+				}
 	}
 
 	//game.world.insert_entity(game.Controller);
@@ -2227,6 +2263,13 @@ bool CGameContext::HandleChatCommand(int ClientID, const char *pMessage)
 		}
 		if(str_comp_nocase(pTopic, "objectives") == 0)
 		{
+			if(str_comp_nocase(g_Config.m_SvGametype, "ck") == 0)
+			{
+				SendChatTarget(ClientID, "CK: attackers capture A-P, then bring the defending flag home. Defenders may destroy the attacking base.");
+				SendChatTarget(ClientID, "Each map has a red attack and a blue attack round. Use /objective for the frontline.");
+				SendChatTarget(ClientID, "CK maps: Tele In/Tele Out with Number N opens for attackers after point N is captured.");
+				return true;
+			}
 			SendChatTarget(ClientID, "A starts red, B starts blue, and neutral C unlocks after 20 seconds.");
 			SendChatTarget(ClientID, "Checkpoint capture accelerates with teammates, freezes when contested, and rolls back after 3 empty seconds.");
 			SendChatTarget(ClientID, "Dynamic objectives rotate between flags, C, enemy checkpoints, breakthroughs, area control, and combined arms.");

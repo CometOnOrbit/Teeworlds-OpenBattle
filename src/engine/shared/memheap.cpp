@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <base/system.h>
+#include <cstddef>
 #include "memheap.h"
 
 static const int CHUNK_SIZE = 1024*64;
@@ -32,14 +33,16 @@ void CHeap::NewChunk()
 void *CHeap::AllocateFromChunk(unsigned int Size)
 {
 	char *pMem;
+	const unsigned Alignment = sizeof(void *);
+	const unsigned Padding = (Alignment-(unsigned)((size_t)m_pCurrent->m_pCurrent&(Alignment-1)))&(Alignment-1);
 
-	// check if we need can fit the allocation
-	if(m_pCurrent->m_pCurrent + Size > m_pCurrent->m_pEnd)
+	if(Size > (unsigned)(m_pCurrent->m_pEnd-m_pCurrent->m_pCurrent) ||
+		Padding > (unsigned)(m_pCurrent->m_pEnd-m_pCurrent->m_pCurrent)-Size)
 		return (void*)0x0;
 
 	// get memory and move the pointer forward
-	pMem = m_pCurrent->m_pCurrent;
-	m_pCurrent->m_pCurrent += Size;
+	pMem = m_pCurrent->m_pCurrent+Padding;
+	m_pCurrent->m_pCurrent = pMem+Size;
 	return pMem;
 }
 

@@ -78,9 +78,11 @@ class CGameContext : public IGameServer
 	bool m_Resetting;
 public:
 	IServer *Server() const { return m_pServer; }
+	class IStorage *Storage();
 	class IConsole *Console() { return m_pConsole; }
 	class ILocalization *Localization() { return m_pLocalization; }
 	CCollision *Collision() { return &m_Collision; }
+	CLayers *Layers() { return &m_Layers; }
 	CTuningParams *Tuning() { return &m_Tuning; }
 	const char *Localize(const char *pText, int ClientID);
 	bool HandleChatCommand(int ClientID, const char *pMessage);

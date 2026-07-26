@@ -52,7 +52,7 @@ enum
 	ENTITY_BF_CHECK_FIRST,
 	ENTITY_BF_CHECK_LAST=13,
 
-	ENTITY_BF_VEHICLE_TEAM_STRIDE=16,
+	ENTITY_BF_VEHICLE_TEAM_STRIDE=16, // Not entitiy, but a numeric stride between the same vehicle type for each team.
 	ENTITY_BF_DOOR_START_FIRST,
 	ENTITY_BF_DOOR_START_LAST=22,
 	ENTITY_BF_HELI,
@@ -73,6 +73,14 @@ enum
 	ENTITY_BF_SWITCH_BASE=48,
 	ENTITY_BF_CP_DEST_FIRST=59,
 	ENTITY_BF_CP_DEST_LAST=61,
+
+	// Minimal DDNet laser markers used to size CK's numbered Door entities.
+	// These share numeric values with legacy Battlefield entities, so CK
+	// handles them before the old controller path.
+	ENTITY_LASER_SHORT=19,
+	ENTITY_LASER_MEDIUM=20,
+	ENTITY_LASER_LONG=21,
+	ENTITY_DOOR=49,
 
 	TILE_AIR=0,
 	TILE_SOLID,
@@ -111,6 +119,11 @@ enum
 
 	LAYERFLAG_DETAIL=1,
 	TILESLAYERFLAG_GAME=1,
+	TILESLAYERFLAG_TELE=2,
+	TILESLAYERFLAG_SPEEDUP=4,
+	TILESLAYERFLAG_FRONT=8,
+	TILESLAYERFLAG_SWITCH=16,
+	TILESLAYERFLAG_TUNE=32,
 
 	ENTITY_OFFSET=255-16*4,
 };
@@ -145,6 +158,32 @@ public:
 	unsigned char m_Flags;
 	unsigned char m_Skip;
 	unsigned char m_Reserved;
+};
+
+// Minimal DDNet switch-layer record used by CK maps.  The server deliberately
+// only consumes open switches and their Number field; timing/team semantics
+// remain map-editor data and are not interpreted here.
+class CSwitchTile
+{
+public:
+	unsigned char m_Number;
+	unsigned char m_Type;
+	unsigned char m_Flags;
+	unsigned char m_Delay;
+};
+
+enum
+{
+	TILE_SWITCHOPEN = 24,
+	TILE_TELEIN = 26,
+	TILE_TELEOUT = 27,
+};
+
+class CTeleTile
+{
+public:
+	unsigned char m_Number;
+	unsigned char m_Type;
 };
 
 struct CMapItemImage
@@ -208,6 +247,17 @@ struct CMapItemLayerTilemap
 
 	int m_aName[3];
 } ;
+
+// DDNet appends these data indices to version-3 tilemap items. Keep this as a
+// separate view so legacy 0.6 tilemap records retain their original layout.
+struct CMapItemLayerTilemapDDNet : public CMapItemLayerTilemap
+{
+	int m_Tele;
+	int m_Speedup;
+	int m_Front;
+	int m_Switch;
+	int m_Tune;
+};
 
 struct CMapItemLayerQuads
 {

@@ -850,7 +850,7 @@ void CCharacter::FireWeapon()
 					GameServer()->SendChatTarget(m_pPlayer->GetCID(), "Can't place more C4!");
 					break;
 				}
-				new CC4(GameWorld(), m_Pos, m_pPlayer->GetCID(), Direction*5.0f);
+				new CC4(GameWorld(), m_Pos, m_pPlayer->GetCID(), Direction*8.0f + m_Core.m_Vel);
 				m_NumC4++;
 				m_C4SinceSupply++;
 				char aBuf[128];
@@ -1465,7 +1465,7 @@ void CCharacter::HandGrenade()
 	vec2 Direction = SafeNormalize(vec2((float)m_LatestInput.m_TargetX,
 		(float)m_LatestInput.m_TargetY));
 	CProjectile *pProj = new CProjectile(GameWorld(), WEAPON_GRENADE,
-		m_pPlayer->GetCID(), m_Pos, Direction*0.7f,
+		m_pPlayer->GetCID(), m_Pos, Direction*0.7f + m_Core.m_Vel,
 		(int)(Server()->TickSpeed()*GameServer()->Tuning()->m_GrenadeLifetime),
 		1, true, 23, 0.0f, SOUND_GRENADE_EXPLODE, WEAPON_GRENADE);
 	CNetObj_Projectile Projectile;
@@ -1656,9 +1656,8 @@ void CCharacter::HandleBattlefieldTiles()
 
 	if(Tile >= TILE_BF_CHECKPOINT1 && Tile <= TILE_BF_CHECKPOINT3)
 	{
-		int State = GameServer()->m_aCheckpointState[Tile-TILE_BF_CHECKPOINT1];
-		if((m_pPlayer->GetTeam() == TEAM_RED && State > 0) ||
-			(m_pPlayer->GetTeam() == TEAM_BLUE && State < 0))
+		int Number = Tile-TILE_BF_CHECKPOINT1+1;
+		if(GameServer()->m_pController->CheckpointTileBlocksCharacter(Number, m_pPlayer->GetTeam()))
 			BlockBattlefieldTile(Flags, "Your Team hasn't this Checkpoint!");
 	}
 	else if(Tile == TILE_BF_REQUIRE_CLASS && !m_pPlayer->HasBattlefieldClass())
@@ -3243,6 +3242,7 @@ void CCharacter::Tele(vec2 Pos)
 {
 	GameServer()->CreatePlayerSpawn(m_Pos);
 	m_Core.m_Pos = Pos;
+	m_Pos = Pos;
 	m_Core.m_HookPos = Pos;
 	m_Core.m_Direction = -1;
 	m_Core.m_HookedPlayer = -1;
@@ -3281,6 +3281,30 @@ void CCharacter::CollideWithDoor(vec2 From, vec2 To)
 		BlockBattlefieldTile(TILEFLAG_VFLIP|TILEFLAG_HFLIP|TILEFLAG_ROTATE, 0);
 		BlockBattlefieldTile(TILEFLAG_ROTATE, 0);
 	}
+}
+
+void CCharacter::CollideWithCKDoor(vec2 From, vec2 To)
+{
+	vec2 DoorDirection = To-From;
+	float DoorLength = length(DoorDirection);
+	if(DoorLength < 0.001f)
+		return;
+	DoorDirection *= 1.0f/DoorLength;
+	vec2 Normal(-DoorDirection.y, DoorDirection.x);
+	float PreviousSide = dot(m_BattlefieldTileLastPos-From, Normal);
+	float CurrentSide = dot(m_Core.m_Pos-From, Normal);
+	if(PreviousSide*CurrentSide > 0.0f || distance(m_BattlefieldTileLastPos, m_Core.m_Pos) < 0.001f)
+		return;
+
+	// Stop an actual crossing at the last valid position. Never project the
+	// character onto the segment or its closest point, which caused the visual
+	// pull toward the middle of long CK doors.
+	m_Core.m_Pos = m_BattlefieldTileLastPos;
+	m_Pos = m_Core.m_Pos;
+	float NormalVelocity = dot(m_Core.m_Vel, Normal);
+	if((PreviousSide > 0.0f && NormalVelocity < 0.0f) ||
+		(PreviousSide < 0.0f && NormalVelocity > 0.0f))
+		m_Core.m_Vel -= Normal*NormalVelocity;
 }
 
 void CCharacter::Check(int Checkpoint)

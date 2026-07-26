@@ -90,6 +90,7 @@ public:
 	void SetBattlefieldBroadcastTimer(int Ticks) { m_BroadcastClearTimer = Ticks; }
 	void Tele(vec2 Pos);
 	void CollideWithDoor(vec2 From, vec2 To);
+	void CollideWithCKDoor(vec2 From, vec2 To);
 	bool CanEnterBattlefieldVehicle() const;
 	bool EnterBattlefieldVehicle(class CBattle *pVehicle, int Type, int Health);
 	void RequestBattlefieldVehicleExit();

@@ -140,11 +140,20 @@ bool IGameController::CanSpawn(int Team, vec2 *pOutPos)
 bool IGameController::OnEntity(int Index, vec2 Pos)
 {
 	if(Index == ENTITY_SPAWN)
-		m_aaSpawnPoints[0][m_aNumSpawnPoints[0]++] = Pos;
+	{
+		if(m_aNumSpawnPoints[0] < 64)
+			m_aaSpawnPoints[0][m_aNumSpawnPoints[0]++] = Pos;
+	}
 	else if(Index == ENTITY_SPAWN_RED)
-		m_aaSpawnPoints[1][m_aNumSpawnPoints[1]++] = Pos;
+	{
+		if(m_aNumSpawnPoints[1] < 64)
+			m_aaSpawnPoints[1][m_aNumSpawnPoints[1]++] = Pos;
+	}
 	else if(Index == ENTITY_SPAWN_BLUE)
-		m_aaSpawnPoints[2][m_aNumSpawnPoints[2]++] = Pos;
+	{
+		if(m_aNumSpawnPoints[2] < 64)
+			m_aaSpawnPoints[2][m_aNumSpawnPoints[2]++] = Pos;
+	}
 	// Battlefield repurposes the stock armor/health entity numbers for its
 	// stationary ammunition and health-projectile stations.
 	else if(Index == ENTITY_BF_HEALTH_STATION)
@@ -282,6 +291,14 @@ bool IGameController::OnEntity(int Index, vec2 Pos)
 	}
 
 	return false;
+}
+
+bool IGameController::CheckpointTileBlocksCharacter(int Number, int Team) const
+{
+	if(Number < 1 || Number > 3)
+		return false;
+	int State = GameServer()->m_aCheckpointState[Number-1];
+	return (Team == TEAM_RED && State > 0) || (Team == TEAM_BLUE && State < 0);
 }
 
 void IGameController::EndRound()

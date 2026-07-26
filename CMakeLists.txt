@@ -507,6 +507,12 @@ set_glob(GAME_SERVER GLOB_RECURSE src/game/server
   entities/bomb.h
   entities/c4.cpp
   entities/c4.h
+  entities/ck_door.cpp
+  entities/ck_door.h
+	entities/ck_point_flag.cpp
+	entities/ck_point_flag.h
+	entities/ck_teleport_marker.cpp
+	entities/ck_teleport_marker.h
   entities/character.cpp
   entities/character.h
   entities/check.cpp
@@ -547,8 +553,12 @@ set_glob(GAME_SERVER GLOB_RECURSE src/game/server
   gamecontext.h
   gamecontroller.cpp
   gamecontroller.h
+	mapconfig.cpp
+	mapconfig.h
   gamemodes/openbattle.cpp
   gamemodes/openbattle.h
+  gamemodes/ck.cpp
+  gamemodes/ck.h
   gameworld.cpp
   gameworld.h
   player.cpp
