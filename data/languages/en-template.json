@@ -621,6 +621,10 @@
         { "key": "capture C", "value": "capture C" },
         { "key": "capture the enemy near checkpoint while holding C", "value": "capture the enemy near checkpoint while holding C" },
         { "key": "hold both checkpoints", "value": "hold both checkpoints" },
-        { "key": "completed", "value": "completed" }
+        { "key": "completed", "value": "completed" },
+        { "key": "CK: attackers capture the required points, then bring the defending flag home.", "value": "CK: attackers capture the required points, then bring the defending flag home." },
+        { "key": "Each map has a red attack and a blue attack round. Use /objective for the frontline.", "value": "Each map has a red attack and a blue attack round. Use /objective for the frontline." },
+        { "key": "CK maps may use team Tele In/Tele Out routes. Doors stop attackers and their vehicles, but defenders can pass.", "value": "CK maps may use team Tele In/Tele Out routes. Doors stop attackers and their vehicles, but defenders can pass." },
+        { "key": "Final stage: the defending flag can now be taken.", "value": "Final stage: the defending flag can now be taken." }
     ]
 }

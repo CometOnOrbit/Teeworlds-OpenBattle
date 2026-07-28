@@ -52,6 +52,7 @@ class CRegister
 		int m_NumTotalRequests;
 		int m_LastResponseStatus;
 		int m_LastResponseIndex;
+		int m_LastSuccessfulInfoSerial;
 		void *m_Lock;
 		array<CJob *> m_lpJobs;
 	} m_aProtocols[NUM_PROTOCOLS];
@@ -60,7 +61,6 @@ class CRegister
 	Uuid m_ChallengeSecret;
 	void *m_Lock;
 	int m_InfoSerial;
-	int m_LastSuccessfulInfoSerial;
 	int m_ServerPort;
 
 	class IEngine *m_pEngine;
@@ -81,6 +81,9 @@ public:
 	void Init(class IEngine *pEngine, class IConsole *pConsole, int ServerPort, unsigned SixupSecurityToken);
 	void RegisterUpdate(int Nettype);
 	void OnNewInfo(const char *pInfo);
+	// Metadata outside the JSON body (currently Community-Token) changed.
+	// Require every protocol line to submit its body again on the next refresh.
+	void ForceInfoUpdate();
 	void OnShutdown();
 	bool OnPacket(const struct CNetChunk *pPacket);
 };

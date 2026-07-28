@@ -55,13 +55,11 @@ bool CGameControllerCK::IsAt(vec2 A, vec2 B, float Radius) const
 
 void CGameControllerCK::ResetCKRound()
 {
-	m_BaseHealth = g_Config.m_SvBaseHealth;
 	m_FinalStage = false;
 	m_RoundFinished = false;
 	m_IntermissionTick = -1;
 	mem_zero(m_aaPresence, sizeof(m_aaPresence));
 	mem_zero(m_aEmptyTicks, sizeof(m_aEmptyTicks));
-	mem_zero(m_aBaseWarning, sizeof(m_aBaseWarning));
 	mem_zero(m_aTeleportCooldown, sizeof(m_aTeleportCooldown));
 	for(int i = 0; i < MAX_POINTS; ++i)
 		m_aPointProgress[i] = 0.0f; // 0 defender-controlled, 1 attacker-controlled
@@ -390,6 +388,32 @@ int CGameControllerCK::AdvanceMetric() const
 		if(CanAttackPoint(i) && m_aNodes[i].m_Depth == BestDepth+1)
 			Progress = max(Progress, m_aPointProgress[i]);
 	return (BestDepth+1)*1001+round_to_int(Progress*1000.0f);
+}
+
+int CGameControllerCK::ActiveCombatants() const
+{
+	int Count = 0;
+	for(int ClientID = 0; ClientID < MAX_CLIENTS; ++ClientID)
+	{
+		const CPlayer *pPlayer = GameServer()->m_apPlayers[ClientID];
+		if(pPlayer && pPlayer->GetTeam() != TEAM_SPECTATORS)
+			++Count;
+	}
+	return Count;
+}
+
+float CGameControllerCK::CaptureDuration() const
+{
+	// Small games need a quick route to the objective, while large games need
+	// enough time for both teams to react. Spectators never affect this value.
+	return clamp(12.0f + 0.5f*ActiveCombatants(), 16.0f, 30.0f);
+}
+
+float CGameControllerCK::CaptureMultiplier(int PlayersOnPoint) const
+{
+	// Teamwork matters without allowing a large stack to erase a point
+	// instantly: 1 player = 1x, 2 = 1.5x, 3 or more = 2x.
+	return 1.0f + 0.5f*clamp(PlayersOnPoint-1, 0, 2);
 }
 
 void CGameControllerCK::PointName(int Point, char *pBuf, int BufSize) const
@@ -749,7 +773,7 @@ void CGameControllerCK::SyncLegacyCheckpointProgress()
 
 void CGameControllerCK::TickPoints()
 {
-	const float Step = 1.0f/(16.0f*Server()->TickSpeed());
+	const float Step = 1.0f/(CaptureDuration()*Server()->TickSpeed());
 	int aAttack[MAX_POINTS]; int aDefend[MAX_POINTS]; int aFirst[MAX_POINTS];
 	mem_zero(aAttack, sizeof(aAttack)); mem_zero(aDefend, sizeof(aDefend));
 	for(int Point = 0; Point < MAX_POINTS; ++Point) aFirst[Point] = -1;
@@ -797,7 +821,7 @@ void CGameControllerCK::TickPoints()
 	for(int Point = 0; Point < MAX_POINTS; ++Point)
 		if(CanRetakePoint(Point) && aDefend[Point] && !aAttack[Point])
 		{
-			m_aPointProgress[Point] = max(0.0f, m_aPointProgress[Point]-Step*(aDefend[Point] > 1 ? 1.5f : 1.0f));
+			m_aPointProgress[Point] = max(0.0f, m_aPointProgress[Point]-Step*CaptureMultiplier(aDefend[Point]));
 			if(m_aPointProgress[Point] <= 0.0f)
 			{
 				char aName[32], aBuf[96]; PointName(Point, aName, sizeof(aName));
@@ -808,7 +832,7 @@ void CGameControllerCK::TickPoints()
 	for(int Point = 0; Point < MAX_POINTS; ++Point)
 		if(CanAttackPoint(Point) && aAttack[Point] && !aDefend[Point])
 		{
-			m_aPointProgress[Point] = min(1.0f, m_aPointProgress[Point]+Step*(aAttack[Point] > 1 ? 1.5f : 1.0f));
+			m_aPointProgress[Point] = min(1.0f, m_aPointProgress[Point]+Step*CaptureMultiplier(aAttack[Point]));
 			if(m_aPointProgress[Point] >= 1.0f)
 			{
 				if(aFirst[Point] >= 0 && GameServer()->m_apPlayers[aFirst[Point]]) GameServer()->m_apPlayers[aFirst[Point]]->m_Score += 5;
@@ -877,20 +901,6 @@ bool CGameControllerCK::CanBeMovedOnBalance(int ClientID)
 		return true;
 	CCharacter *p = GameServer()->m_apPlayers[ClientID]->GetCharacter();
 	return !p || !m_apFlags[DefendingPhysicalTeam()] || m_apFlags[DefendingPhysicalTeam()]->m_pCarryingCharacter != p;
-}
-
-void CGameControllerCK::OnBaseDamage(vec2 Pos, int Owner, int Damage)
-{
-	if(m_RoundFinished || Owner < 0 || Owner >= MAX_CLIENTS || !m_apFlags[AttackingPhysicalTeam()]) return;
-	CPlayer *pOwner = GameServer()->m_apPlayers[Owner];
-	if(!pOwner || pOwner->GetTeam() != Defender() || !IsAt(Pos, m_apFlags[AttackingPhysicalTeam()]->m_Pos, 56.0f)) return;
-	m_BaseHealth = max(0, m_BaseHealth-Damage);
-	char aBuf[96]; str_format(aBuf, sizeof(aBuf), "Attacking base: %d/%d", m_BaseHealth, g_Config.m_SvBaseHealth);
-	GameServer()->SendBroadcast(aBuf, Owner);
-	const int Threshold[3] = {75, 50, 25};
-	for(int i = 0; i < 3; ++i)
-		if(!m_aBaseWarning[i] && m_BaseHealth*100 <= g_Config.m_SvBaseHealth*Threshold[i]) { m_aBaseWarning[i] = true; Announce(aBuf); }
-	if(!m_BaseHealth) FinishRound("attacking base destroyed", false);
 }
 
 void CGameControllerCK::TickFlags()
@@ -965,10 +975,11 @@ void CGameControllerCK::SendObjectiveStatus(int ClientID)
 	if(!aAttack[0]) str_copy(aAttack, "-", sizeof(aAttack));
 	if(!aRetake[0]) str_copy(aRetake, "-", sizeof(aRetake));
 	char aBuf[512]; int Left = g_Config.m_SvTimelimit ? max(0, g_Config.m_SvTimelimit*60-(Server()->Tick()-m_RoundStartTick)/Server()->TickSpeed()) : -1;
+	int CaptureSeconds = round_to_int(CaptureDuration());
 	if(Left >= 0)
-		str_format(aBuf,sizeof(aBuf), "CK round %d: %s attack, %d:%02d left, attack [%s], retake [%s], base %d/%d%s", m_AttackingTeam == TEAM_RED ? 1 : 2, m_AttackingTeam == TEAM_RED ? "Red" : "Blue", Left/60, Left%60, aAttack, aRetake, m_BaseHealth,g_Config.m_SvBaseHealth,m_FinalStage ? ", final flag stage" : "");
+		str_format(aBuf,sizeof(aBuf), "CK round %d: %s attack, %d:%02d left, capture %ds, attack [%s], retake [%s]%s", m_AttackingTeam == TEAM_RED ? 1 : 2, m_AttackingTeam == TEAM_RED ? "Red" : "Blue", Left/60, Left%60, CaptureSeconds, aAttack, aRetake, m_FinalStage ? ", final flag stage" : "");
 	else
-		str_format(aBuf,sizeof(aBuf), "CK round %d: %s attack, no time limit, attack [%s], retake [%s], base %d/%d%s", m_AttackingTeam == TEAM_RED ? 1 : 2, m_AttackingTeam == TEAM_RED ? "Red" : "Blue", aAttack, aRetake, m_BaseHealth,g_Config.m_SvBaseHealth,m_FinalStage ? ", final flag stage" : "");
+		str_format(aBuf,sizeof(aBuf), "CK round %d: %s attack, no time limit, capture %ds, attack [%s], retake [%s]%s", m_AttackingTeam == TEAM_RED ? 1 : 2, m_AttackingTeam == TEAM_RED ? "Red" : "Blue", CaptureSeconds, aAttack, aRetake, m_FinalStage ? ", final flag stage" : "");
 	GameServer()->SendChatTarget(ClientID,aBuf);
 }
 

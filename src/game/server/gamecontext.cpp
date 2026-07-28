@@ -207,7 +207,6 @@ void CGameContext::CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamag
 
 	if (!NoDamage)
 	{
-		m_pController->OnBaseDamage(Pos, Owner, 6);
 		// deal damage
 		CCharacter *apEnts[MAX_CLIENTS];
 		float Radius = 135.0f;
@@ -241,7 +240,6 @@ void CGameContext::CreateExplosion2(vec2 Pos, int Owner, int Weapon, int Damage)
 
 	if(Damage == 1)
 	{
-		m_pController->OnBaseDamage(Pos, Owner, 3);
 		CCharacter *apEnts[MAX_CLIENTS];
 		const float Radius = 135.0f;
 		const float InnerRadius = 48.0f;
@@ -2265,9 +2263,9 @@ bool CGameContext::HandleChatCommand(int ClientID, const char *pMessage)
 		{
 			if(str_comp_nocase(g_Config.m_SvGametype, "ck") == 0)
 			{
-				SendChatTarget(ClientID, "CK: attackers capture A-P, then bring the defending flag home. Defenders may destroy the attacking base.");
+				SendChatTarget(ClientID, "CK: attackers capture the required points, then bring the defending flag home.");
 				SendChatTarget(ClientID, "Each map has a red attack and a blue attack round. Use /objective for the frontline.");
-				SendChatTarget(ClientID, "CK maps: Tele In/Tele Out with Number N opens for attackers after point N is captured.");
+				SendChatTarget(ClientID, "CK maps may use team Tele In/Tele Out routes. Doors stop attackers and their vehicles, but defenders can pass.");
 				return true;
 			}
 			SendChatTarget(ClientID, "A starts red, B starts blue, and neutral C unlocks after 20 seconds.");

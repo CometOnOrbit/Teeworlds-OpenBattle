@@ -1847,6 +1847,13 @@ void CServer::ConchainSpecialInfoupdate(IConsole::IResult *pResult, void *pUserD
 		((CServer *)pUserData)->UpdateServerInfo();
 }
 
+void CServer::ConchainCommunityTokenUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+{
+	pfnCallback(pResult, pCallbackUserData);
+	if(pResult->NumArguments())
+		((CServer *)pUserData)->m_Register.ForceInfoUpdate();
+}
+
 void CServer::ConchainMaxclientsperipUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
 {
 	pfnCallback(pResult, pCallbackUserData);
@@ -1911,7 +1918,7 @@ void CServer::RegisterCommands()
 
 	Console()->Chain("sv_name", ConchainSpecialInfoupdate, this);
 	Console()->Chain("password", ConchainSpecialInfoupdate, this);
-	Console()->Chain("sv_register_community_token", ConchainSpecialInfoupdate, this);
+	Console()->Chain("sv_register_community_token", ConchainCommunityTokenUpdate, this);
 	Console()->Chain("sv_flag", ConchainSpecialInfoupdate, this);
 
 	Console()->Chain("sv_max_clients_per_ip", ConchainMaxclientsperipUpdate, this);
@@ -2043,4 +2050,3 @@ int main(int argc, const char **argv) // ignore_convention
 	delete pConfig;
 	return 0;
 }
-

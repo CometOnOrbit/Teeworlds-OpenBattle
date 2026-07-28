@@ -49,8 +49,6 @@ class CGameControllerCK : public IGameController
 	unsigned short m_GoalMask;
 	bool m_GraphLoaded;
 	int m_AttackingTeam;
-	int m_BaseHealth;
-	bool m_aBaseWarning[3];
 	bool m_FinalStage;
 	bool m_MapValid;
 	bool m_RoundFinished;
@@ -86,6 +84,9 @@ class CGameControllerCK : public IGameController
 	int CapturedPointCount() const;
 	int AdvanceMetric() const;
 	void PointName(int Point, char *pBuf, int BufSize) const;
+	int ActiveCombatants() const;
+	float CaptureDuration() const;
+	float CaptureMultiplier(int PlayersOnPoint) const;
 
 public:
 	CGameControllerCK(class CGameContext *pGameServer);
@@ -96,7 +97,6 @@ public:
 	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
 	virtual bool CanBeMovedOnBalance(int ClientID);
 	virtual void RegisterCheckpointPresence(int Checkpoint, int ClientID);
-	virtual void OnBaseDamage(vec2 Pos, int Owner, int Damage);
 	virtual bool IsDoorClosed(int Number) const;
 	virtual int PointFlagTeam(int Number) const;
 	virtual bool TeleportEnabled(int Number, int Side) const;

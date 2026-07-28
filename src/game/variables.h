@@ -35,7 +35,6 @@ MACRO_CONFIG_INT(SvTutorial, sv_tutorial, 1, 0, 1, CFGFLAG_SERVER, "Send welcome
 MACRO_CONFIG_STR(SvIpinfoFile, sv_ipinfo_file, 256, "server/ipinfo/country.csv", CFGFLAG_SERVER, "IPinfo country.csv for auto language by IP (empty disables)")
 MACRO_CONFIG_INT(SvDynamicObjectives, sv_dynamic_objectives, 1, 0, 1, CFGFLAG_SERVER, "Enable rotating OpenBattle dynamic objectives")
 MACRO_CONFIG_INT(SvDynamicComeback, sv_dynamic_comeback, 1, 0, 1, CFGFLAG_SERVER, "Double dynamic team rewards for an eligible trailing team")
-MACRO_CONFIG_INT(SvBaseHealth, sv_base_health, 100, 1, 10000, CFGFLAG_SERVER, "CK attacking-base health")
 
 // debug
 #ifdef CONF_DEBUG // this one can crash the server if not used correctly

@@ -116,9 +116,6 @@ public:
 	// OpenBattle capture tiles register occupants here. Other game modes ignore it.
 	virtual void RegisterCheckpointPresence(int Checkpoint, int ClientID) { (void)Checkpoint; (void)ClientID; }
 	virtual void SendObjectiveStatus(int ClientID) { (void)ClientID; }
-	// CK uses this for damage applied to its physical attacking-base flag.
-	// Keeping it on the controller makes all explosion producers share one path.
-	virtual void OnBaseDamage(vec2 Pos, int Owner, int Damage) { (void)Pos; (void)Owner; (void)Damage; }
 	virtual bool IsDoorClosed(int Number) const { (void)Number; return false; }
 	virtual int PointFlagTeam(int Number) const { (void)Number; return -1; }
 	virtual bool TeleportEnabled(int Number, int Side) const { (void)Number; (void)Side; return false; }

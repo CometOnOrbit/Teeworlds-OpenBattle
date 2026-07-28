@@ -621,6 +621,10 @@
         { "key": "capture C", "value": "占领 C" },
         { "key": "capture the enemy near checkpoint while holding C", "value": "保持 C 的同时占领敌方近端据点" },
         { "key": "hold both checkpoints", "value": "同时保持两个目标" },
-        { "key": "completed", "value": "已完成" }
+        { "key": "completed", "value": "已完成" },
+        { "key": "CK: attackers capture the required points, then bring the defending flag home.", "value": "CK：进攻方占领所需据点后，将防守方旗帜带回进攻基地。" },
+        { "key": "Each map has a red attack and a blue attack round. Use /objective for the frontline.", "value": "每张地图先由红队进攻、再由蓝队进攻。使用 /objective 查看战线。" },
+        { "key": "CK maps may use team Tele In/Tele Out routes. Doors stop attackers and their vehicles, but defenders can pass.", "value": "CK 地图可使用阵营 Tele In/Tele Out 路线。门会阻挡进攻方及其载具，防守方可以通过。" },
+        { "key": "Final stage: the defending flag can now be taken.", "value": "最终阶段：现在可以夺取防守方旗帜。" }
     ]
 }

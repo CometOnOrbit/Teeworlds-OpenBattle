@@ -70,24 +70,28 @@ int CRegister::SendRegister(void *pUser)
 	str_format(aChallengeSecret, sizeof(aChallengeSecret), "%s:%s", aChallengeUuid, ProtocolToString(Protocol));
 
 	int InfoSerial;
+	int LastSuccessfulInfoSerial;
 	bool SendInfo;
+	char aServerInfo[sizeof(pContext->m_pParent->m_aServerInfo)];
 	{
 		lock_wait(pContext->m_pParent->m_aProtocols[Protocol].m_Lock);
 		const int ProtoStatus = pContext->m_pParent->m_aProtocols[Protocol].m_LastResponseStatus;
+		LastSuccessfulInfoSerial = pContext->m_pParent->m_aProtocols[Protocol].m_LastSuccessfulInfoSerial;
 		lock_release(pContext->m_pParent->m_aProtocols[Protocol].m_Lock);
 
 		lock_wait(pContext->m_pParent->m_Lock);
 		InfoSerial = pContext->m_pParent->m_InfoSerial;
-		// keep sending info until this protocol line is OK (ipv4/0.6 must
-		// carry community/flag even if another line registered first)
-		SendInfo = InfoSerial > pContext->m_pParent->m_LastSuccessfulInfoSerial
+		str_copy(aServerInfo, pContext->m_pParent->m_aServerInfo, sizeof(aServerInfo));
+		// Each protocol line needs its own complete body. In particular, the
+		// master authenticates Community-Token per 0.6/0.7 and IPv4/IPv6 line.
+		SendInfo = InfoSerial > LastSuccessfulInfoSerial
 			|| ProtoStatus != STATUS_OK;
 		lock_release(pContext->m_pParent->m_Lock);
 	}
 
 	CHttpRequest Register("POST", g_Config.m_SvRegisterUrl, 15L, ProtocolToHttpResolve(Protocol));
 	if(SendInfo)
-		Register.PostJson(pContext->m_pParent->m_aServerInfo);
+		Register.PostJson(aServerInfo);
 
 	char aHeader[256];
 	str_format(aHeader, sizeof(aHeader), "Address: %s", aAddress);
@@ -206,17 +210,17 @@ int CRegister::SendRegister(void *pUser)
 
 	if(Status == STATUS_OK)
 	{
-		lock_wait(pContext->m_pParent->m_Lock);
-		if(InfoSerial > pContext->m_pParent->m_LastSuccessfulInfoSerial)
-			pContext->m_pParent->m_LastSuccessfulInfoSerial = InfoSerial;
-		lock_release(pContext->m_pParent->m_Lock);
+		lock_wait(pContext->m_pParent->m_aProtocols[Protocol].m_Lock);
+		if(InfoSerial > pContext->m_pParent->m_aProtocols[Protocol].m_LastSuccessfulInfoSerial)
+			pContext->m_pParent->m_aProtocols[Protocol].m_LastSuccessfulInfoSerial = InfoSerial;
+		lock_release(pContext->m_pParent->m_aProtocols[Protocol].m_Lock);
 	}
 	else if(Status == STATUS_NEEDINFO)
 	{
-		lock_wait(pContext->m_pParent->m_Lock);
-		if(InfoSerial == pContext->m_pParent->m_LastSuccessfulInfoSerial)
-			pContext->m_pParent->m_LastSuccessfulInfoSerial -= 1;
-		lock_release(pContext->m_pParent->m_Lock);
+		lock_wait(pContext->m_pParent->m_aProtocols[Protocol].m_Lock);
+		if(InfoSerial == pContext->m_pParent->m_aProtocols[Protocol].m_LastSuccessfulInfoSerial)
+			pContext->m_pParent->m_aProtocols[Protocol].m_LastSuccessfulInfoSerial -= 1;
+		lock_release(pContext->m_pParent->m_aProtocols[Protocol].m_Lock);
 	}
 	return 0;
 }
@@ -274,12 +278,12 @@ CRegister::CRegister()
 		m_aProtocols[i].m_NumTotalRequests = 0;
 		m_aProtocols[i].m_LastResponseStatus = STATUS_NONE;
 		m_aProtocols[i].m_LastResponseIndex = -1;
+		m_aProtocols[i].m_LastSuccessfulInfoSerial = -1;
 		m_aProtocols[i].m_NextRegister = -1;
 		m_aProtocols[i].m_Lock = lock_create();
 	}
 	m_Lock = lock_create();
 	m_InfoSerial = -1;
-	m_LastSuccessfulInfoSerial = -1;
 	m_ServerPort = 0;
 }
 
@@ -420,12 +424,23 @@ void CRegister::RegisterUpdate(int Nettype)
 
 void CRegister::OnNewInfo(const char *pInfo)
 {
+	lock_wait(m_Lock);
 	if(m_GotServerInfo && str_comp(m_aServerInfo, pInfo) == 0)
+	{
+		lock_release(m_Lock);
 		return;
+	}
 	m_GotServerInfo = true;
 	str_copy(m_aServerInfo, pInfo, sizeof(m_aServerInfo));
-	lock_wait(m_Lock);
 	m_InfoSerial++;
+	lock_release(m_Lock);
+}
+
+void CRegister::ForceInfoUpdate()
+{
+	lock_wait(m_Lock);
+	if(m_GotServerInfo)
+		m_InfoSerial++;
 	lock_release(m_Lock);
 }
 

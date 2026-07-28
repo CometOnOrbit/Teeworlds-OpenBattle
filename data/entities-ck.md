@@ -21,6 +21,8 @@ it opens when CP `N` is attackable through any predecessor and remains open
 after CP `N` is captured. Number `255` is the final-stage base door.
 When closed, a numbered Door blocks attacker characters only; defenders pass
 through it, while projectiles and vehicle weapons remain blocked for both teams.
+Attacker vehicles are characters for this purpose and cannot drive through a
+closed front-line Door.
 
 CK objectives use Switch `TILE_SWITCHOPEN` Number `1-16`. CK Tele In Numbers
 `1-16` are attacker entrances for the matching CP; `17-32` are defender
@@ -33,6 +35,7 @@ icons in this Game-layer atlas. A Tele In follows its matching CP's ownership:
 the defender entrance is active until the attackers
 fully capture that CP, then only the attacker entrance is active. A retake
 switches it back, so both teams can never use the same CP entrance at once.
+Teleports are optional map shortcuts; vehicles cannot use them.
 When an active Tele In overlaps a closed Door, the Door is shown as the single
 laser marker; the short Tele marker returns after that Door opens.
 
@@ -40,6 +43,20 @@ To show a CP flag, place either standard Flagstand entity in the **Switch**
 layer and set its Number to the same Number as the objective. It is cosmetic:
 the server snapshots it in the team colour that currently controls that Switch
 objective, and it can never be picked up.
+
+## Match flow
+
+Each map has two legs: Red attacks first, then Blue attacks from the physical
+red spawn side. Attackers capture the configured goals and then bring the
+defending flag back to the attacking base. This is the only round win condition.
+If time expires, the attack is recorded by captured points, deepest progress and
+current capture progress for the two-leg comparison.
+
+A point is frozen while contested. With no players present it begins slowly
+returning after three seconds. Its base capture duration follows the number of
+non-spectator players (`16-30` seconds); a second friendly player captures at
+`1.5x` speed and three or more capture at the capped `2x` speed. The same rules
+apply to defender retakes.
 
 ## CK point graph
 
@@ -53,6 +70,10 @@ for the `A → B → C/C-SideA → D` layout.
 When a node is captured, every upstream predecessor is made attacking; when it
 is retaken, every downstream successor is made defending. All listed `goals`
 must be captured before the final flag stage starts.
+
+Arbitrary acyclic graphs are supported, but a main route with an occasional
+side branch is recommended so players can read the current attack and retake
+lists from `/objective` at a glance.
 
 The old Battlefield single-tile doors, checkpoint lines, checkpoint destinations
 and A-C checkpoint tiles are intentionally absent. CK uses the numbered Door,
