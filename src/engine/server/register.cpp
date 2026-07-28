@@ -95,10 +95,10 @@ int CRegister::SendRegister(void *pUser)
 	if(g_Config.m_SvRegisterDebug)
 	{
 		char aBuf[256];
-		str_format(aBuf, sizeof(aBuf), "request protocol=%s serial=%d body=%d community-token=%s length=%d",
+		str_format(aBuf, sizeof(aBuf), "request protocol=%s serial=%d body=%d community-token=%s length=%d endpoint=%s",
 			ProtocolToString(Protocol), InfoSerial, SendInfo ? 1 : 0,
 			g_Config.m_SvRegisterCommunityToken[0] ? "set" : "unset",
-			str_length(g_Config.m_SvRegisterCommunityToken));
+			str_length(g_Config.m_SvRegisterCommunityToken), g_Config.m_SvRegisterUrl);
 		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "register", aBuf);
 	}
 
