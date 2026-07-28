@@ -95,11 +95,13 @@ int CRegister::SendRegister(void *pUser)
 	if(g_Config.m_SvRegisterDebug)
 	{
 		char aBuf[256];
-		str_format(aBuf, sizeof(aBuf), "request protocol=%s serial=%d body=%d community-token=%s length=%d endpoint=%s",
+		str_format(aBuf, sizeof(aBuf), "request protocol=%s serial=%d body=%d community-token=%s length=%d flag=%d endpoint=%s",
 			ProtocolToString(Protocol), InfoSerial, SendInfo ? 1 : 0,
 			g_Config.m_SvRegisterCommunityToken[0] ? "set" : "unset",
-			str_length(g_Config.m_SvRegisterCommunityToken), g_Config.m_SvRegisterUrl);
+			str_length(g_Config.m_SvRegisterCommunityToken), g_Config.m_SvFlag, g_Config.m_SvRegisterUrl);
 		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "register", aBuf);
+		if(g_Config.m_SvRegisterCommunityToken[0] && g_Config.m_SvFlag == -1)
+			pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "register", "Community-Token is set but sv_flag is unset; configure the community's ISO 3166-1 numeric country code for browser grouping.");
 	}
 
 	char aHeader[256];
