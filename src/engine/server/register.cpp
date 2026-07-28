@@ -92,6 +92,15 @@ int CRegister::SendRegister(void *pUser)
 	CHttpRequest Register("POST", g_Config.m_SvRegisterUrl, 15L, ProtocolToHttpResolve(Protocol));
 	if(SendInfo)
 		Register.PostJson(aServerInfo);
+	if(g_Config.m_SvRegisterDebug)
+	{
+		char aBuf[256];
+		str_format(aBuf, sizeof(aBuf), "request protocol=%s serial=%d body=%d community-token=%s length=%d",
+			ProtocolToString(Protocol), InfoSerial, SendInfo ? 1 : 0,
+			g_Config.m_SvRegisterCommunityToken[0] ? "set" : "unset",
+			str_length(g_Config.m_SvRegisterCommunityToken));
+		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "register", aBuf);
+	}
 
 	char aHeader[256];
 	str_format(aHeader, sizeof(aHeader), "Address: %s", aAddress);
@@ -137,6 +146,12 @@ int CRegister::SendRegister(void *pUser)
 	Register.StartRunBlocking();
 
 	char aBuf[256];
+	if(g_Config.m_SvRegisterDebug)
+	{
+		str_format(aBuf, sizeof(aBuf), "response protocol=%s http=%d transport=%s bytes=%d",
+			ProtocolToString(Protocol), Register.ResponseCode(), Register.Result() == 0 ? "ok" : "error", Register.ReceivedDataSize());
+		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "register", aBuf);
+	}
 	if(Register.Result() != 0)
 	{
 		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, ProtocolToSystem(Protocol), "error sending request to master");
@@ -162,6 +177,15 @@ int CRegister::SendRegister(void *pUser)
 		str_format(aBuf, sizeof(aBuf), "invalid status from master: %s", (const char *)rStatusString);
 		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, ProtocolToSystem(Protocol), aBuf);
 		return -4;
+	}
+	if(g_Config.m_SvRegisterDebug)
+	{
+		const json_value &rMessage = (*pJson)["message"];
+		str_format(aBuf, sizeof(aBuf), "master protocol=%s status=%s%s%s",
+			ProtocolToString(Protocol), (const char *)rStatusString,
+			rMessage.type == json_string ? " message=" : "",
+			rMessage.type == json_string ? (const char *)rMessage : "");
+		pContext->m_pParent->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "register", aBuf);
 	}
 	if(Status == STATUS_ERROR)
 	{

@@ -20,4 +20,5 @@ sv_dynamic_comeback 1
 
 sv_sixup 1
 # sv_register_community_token YOUR_COMMUNITY_TOKEN
+# sv_register_debug 1
 # sv_flag YOUR_ISO_COUNTRY_CODE

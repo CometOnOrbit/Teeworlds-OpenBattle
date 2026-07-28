@@ -24,6 +24,7 @@ MACRO_CONFIG_INT(SvRegister, sv_register, 1, 0, 1, CFGFLAG_SERVER, "Register ser
 MACRO_CONFIG_INT(SvRegisterIpv6, sv_register_ipv6, 0, 0, 1, CFGFLAG_SERVER, "Register IPv6 addresses with the master (0 = IPv4 only)")
 MACRO_CONFIG_STR(SvRegisterUrl, sv_register_url, 128, "https://register1.ddnet.org/ddnet/15/register", CFGFLAG_SERVER, "Masterserver URL to register to")
 MACRO_CONFIG_STR(SvRegisterCommunityToken, sv_register_community_token, 128, "", CFGFLAG_SERVER, "Token to register this server to a particular community")
+MACRO_CONFIG_INT(SvRegisterDebug, sv_register_debug, 0, 0, 1, CFGFLAG_SERVER, "Log HTTP registration diagnostics without exposing the community token")
 MACRO_CONFIG_INT(SvFlag, sv_flag, -1, -1, 999, CFGFLAG_SERVER, "Country flag for community grouping (ISO 3166-1 numeric)")
 MACRO_CONFIG_INT(SvSixup, sv_sixup, 1, 0, 1, CFGFLAG_SERVER, "Enable 0.7 (sixup) connections and register tw0.7")
 MACRO_CONFIG_STR(SvRconPassword, sv_rcon_password, 32, "", CFGFLAG_SERVER, "Remote console password (full access)")
